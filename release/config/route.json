@@ -2,7 +2,7 @@
   "domainStrategy": "AsIs",
   "rules": [
     {
-      "outboundTag": "w1ncray-block",
+      "outboundTag": "xrayw-block",
       "protocol": ["bittorrent"]
     }
   ]

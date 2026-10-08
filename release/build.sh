@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
 # Builds release assets into dist/ with the names install.sh downloads:
-#   W1nCray-linux-<arch>.gz        full build (every lego DNS provider)
-#   W1nCray-linux-<arch>-lite.gz   lite build (6 DNS providers, embedded fallback roots)
-#   W1nCray-linux-amd64|arm64      raw full binaries, kept for scripts older than v0.3.0
-#   SHA256SUMS                     checksums of everything above
+#   XrayW-linux-<arch>.gz        full build (every lego DNS provider)
+#   XrayW-linux-<arch>-lite.gz   lite build (6 DNS providers, embedded fallback roots)
+#   SHA256SUMS                   checksums of everything above
 #
-# Usage: bash release/build.sh v0.3.0 [arch ...]   (default: all architectures)
+# Usage: bash release/build.sh v1.0.0 [arch ...]   (default: all architectures)
 set -euo pipefail
 version="${1:-dev}"
 shift || true
@@ -28,7 +27,7 @@ targets=(
 )
 want=("$@")
 
-mod=github.com/W1nCwC/W1nCray
+mod=github.com/W1nCwC/XrayW
 rm -rf dist
 mkdir -p dist
 for t in "${targets[@]}"; do
@@ -43,16 +42,12 @@ for t in "${targets[@]}"; do
 			tags="dnslite,fallbackroots"
 			suffix="-lite"
 		fi
-		out="dist/W1nCray-linux-$name$suffix"
+		out="dist/XrayW-linux-$name$suffix"
 		echo "build $out"
 		env CGO_ENABLED=0 GOOS=linux GOARCH="$goarch" ${extra:+"$extra"} \
 			go build -trimpath -tags "$tags" \
 			-ldflags "-s -w -X $mod/cmd.version=$version" -o "$out" .
-		if [ "$flavor" = full ] && { [ "$name" = amd64 ] || [ "$name" = arm64 ]; }; then
-			gzip -9 -n -c "$out" >"$out.gz" # the raw file stays for old installers
-		else
-			gzip -9 -n -f "$out"
-		fi
+		gzip -9 -n -f "$out"
 	done
 done
 (cd dist && sha256sum -- * | grep -v ' SHA256SUMS$' >SHA256SUMS)

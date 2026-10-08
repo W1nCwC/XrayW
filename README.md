@@ -1,120 +1,121 @@
-# W1nCray
+[简体中文](docs/README.zh-CN.md)
 
-> **XrayW**：本仓库收录 W1nCray **v0.1.0 – v0.3.0**，即基于官方 Xray-core 重写、兼容 Xboard（UniProxy 与 WebSocket）的 XrayR 替代版本。
-> 从 v0.4.0 起项目演进为多内核 agent，不再以兼容 Xboard 为目标，后续版本在 [W1nCray](https://github.com/W1nCwC/W1nCray) 发布。
-> 本仓库的发布包与原 W1nCray 发布逐字节相同；其中 `install.sh` 的下载地址仍指向 W1nCray 仓库的同版本发布（保持可用）。
+# XrayW
 
-基于**官方稳定版 Xray-core（v26.3.27）**重构的 XrayR，专为 [Xboard](https://github.com/cedar2025/Xboard) 设计的节点后端。
+> XrayW is an XrayR rewrite (reset edition) built on the official Xray-core, designed for Xboard. It was first developed as W1nCray v0.1–v0.3; W1nCray has since evolved into a multi-core agent, see https://github.com/W1nCwC/W1nCray
 
-- 内核：官方 `github.com/xtls/xray-core v1.260327.0`（= v26.3.27，截至 2026-10 最新的非预发布版本），不使用任何魔改分支。
-- 配置：沿用 XrayR 的 `config.yml` 结构，旧配置基本可直接使用。
-- 面板：对接 Xboard UniProxy 节点 API（`/api/v1/server/UniProxy/*`）。
+A node backend for [Xboard](https://github.com/cedar2025/Xboard), rebuilt from XrayR on the **official stable Xray-core (v26.3.27)**.
 
-## 相比 XrayR
+- Current version: **v1.0.0** (Xray-core v26.3.27)
+- Kernel: the official `github.com/xtls/xray-core v1.260327.0` (= v26.3.27, the latest non-prerelease version as of 2026-10). No modified forks are used.
+- Configuration: keeps the XrayR `config.yml` structure, so existing configs mostly work as they are.
+- Panel: connects to the Xboard UniProxy node API (`/api/v1/server/UniProxy/*`).
 
-| 能力 | XrayR v0.9.4（NewV2board） | W1nCray |
+## Comparison with XrayR
+
+| Capability | XrayR v0.9.4 (NewV2board) | XrayW |
 |---|---|---|
-| Xray 内核 | v1.8.20（2024） | v26.3.27 |
-| 面板 `device_limit` | 未实现（代码中为 `todo`） | ✅ 本节点实时 + 借助 Xboard `alivelist` 的跨节点全局限制 |
-| 在线 IP 上报（`alive`） | 未实现 | ✅ |
-| 节点负载上报（`status`） | 未实现 | ✅ CPU / 内存 / Swap / 磁盘 |
-| 用户限速 | 大包可绕过（`WaitN` n>burst 直接放行） | ✅ 已修复，上下行独立令牌桶，Vision 下禁用 splice 防止绕过 |
-| Hysteria2 | ❌ | ✅（含 salamander 混淆、带宽） |
+| Xray core | v1.8.20 (2024) | v26.3.27 |
+| Panel `device_limit` | Not implemented (`todo` in the code) | ✅ Real-time per node, plus a cross-node global limit using Xboard `alivelist` |
+| Online IP reporting (`alive`) | Not implemented | ✅ |
+| Node load reporting (`status`) | Not implemented | ✅ CPU / memory / swap / disk |
+| User speed limit | Large packets can bypass it (`WaitN` with n > burst passes straight through) | ✅ Fixed. Independent upload and download token buckets; splice is disabled under Vision to prevent bypass |
+| Hysteria2 | ❌ | ✅ (including salamander obfuscation and bandwidth) |
 | XHTTP / VLESS Encryption / ECH | ❌ | ✅ |
-| 面板证书下发 `cert_config` | ❌ | ✅ http / dns / self / file / content |
-| 面板自定义出站 / 自定义路由 | ❌ | ✅ |
-| 默认阻止访问内网地址 | ❌ | ✅（可关闭） |
-| dispatcher 实现 | 复制并魔改官方代码 | 包装官方 DefaultDispatcher（便于跟进内核升级） |
+| Panel certificate delivery `cert_config` | ❌ | ✅ http / dns / self / file / content |
+| Panel custom outbounds / custom routing | ❌ | ✅ |
+| Access to internal addresses blocked by default | ❌ | ✅ (can be turned off) |
+| Dispatcher implementation | Copied and modified official code | Wraps the official DefaultDispatcher (easier to follow kernel upgrades) |
 
-## 协议支持
+## Protocol Support
 
-| Xboard 节点类型 | 支持情况 |
+| Xboard node type | Support |
 |---|---|
-| VMess | ✅ TCP / WS / gRPC / HTTPUpgrade / XHTTP / mKCP，可选 TLS |
-| VLESS | ✅ 同上 + REALITY、`xtls-rprx-vision`、VLESS Encryption |
-| Trojan | ✅ TLS 或 REALITY |
-| Shadowsocks | ✅ AEAD（aes-128/256-gcm、chacha20-poly1305 等）、2022-blake3-aes-128/256-gcm |
+| VMess | ✅ TCP / WS / gRPC / HTTPUpgrade / XHTTP / mKCP, optional TLS |
+| VLESS | ✅ Same as above, plus REALITY, `xtls-rprx-vision`, VLESS Encryption |
+| Trojan | ✅ TLS or REALITY |
+| Shadowsocks | ✅ AEAD (aes-128/256-gcm, chacha20-poly1305, etc.), 2022-blake3-aes-128/256-gcm |
 | Hysteria2 | ✅ |
-| SOCKS / HTTP | ✅（用户变更时重建该入站） |
-| Shadowsocks 2022-chacha20 | ❌ Xray 多用户不支持 |
-| Hysteria v1 / TUIC / AnyTLS / Naive / Mieru | ❌ 官方 Xray 无对应入站，启动时会报错提示 |
-| 传输 H2 / QUIC | ❌ 已被 Xray 移除，请改用 XHTTP |
+| SOCKS / HTTP | ✅ (the inbound is rebuilt when users change) |
+| Shadowsocks 2022-chacha20 | ❌ Not supported by Xray multi-user |
+| Hysteria v1 / TUIC / AnyTLS / Naive / Mieru | ❌ No matching inbound in official Xray; startup reports an error |
+| Transport H2 / QUIC | ❌ Removed by Xray; use XHTTP instead |
 
-## 安装（Linux：Debian/Ubuntu、Alpine、OpenWRT 等）
+## Installation (Linux: Debian/Ubuntu, Alpine, OpenWRT, etc.)
 
-支持 systemd（Debian/Ubuntu/CentOS…）、OpenRC（Alpine）、procd（OpenWRT）三种服务管理器，脚本为 POSIX sh，只依赖 busybox 自带的工具。
-
-```bash
-# 一键安装（curl 或 wget 任选其一；OpenWRT 没有 curl，用 wget）
-(curl -fsSL -o /tmp/W1nCray-install.sh https://raw.githubusercontent.com/W1nCwC/W1nCray/main/install.sh \
-  || wget -O /tmp/W1nCray-install.sh https://raw.githubusercontent.com/W1nCwC/W1nCray/main/install.sh) \
-  && sh /tmp/W1nCray-install.sh install
-# 或使用本地编译的二进制
-sh install.sh install --binary ./W1nCray-linux-amd64
-```
-
-安装参数：`--lite | --full`（版本类型）、`--prefix DIR`（安装目录，空间不足时指向外部存储）、`--with-geo`（强制下载 geo 文件）、`--version vX.Y.Z`、`--url 地址`、`--binary 文件`。
-
-安装脚本会：
-
-1. 按 CPU 自动选择资产（amd64 / 386 / arm64 / armv5-7 / mips / mipsle / mips64(le) / riscv64 / loong64；MIPS 通过 ELF 头判断字节序，ARM 通过 `/proc/cpuinfo` 判断 VFP，运行自检失败时自动换更低要求的版本），下载后校验 `SHA256SUMS`；
-2. 安装到 `/usr/local/W1nCray/W1nCray`，配置目录 `/etc/W1nCray`，注册服务 `W1nCray`；并把管理命令放到 `/usr/local/bin/W1nCray`（OpenWRT 为 `/usr/bin/W1nCray`）；
-3. **检测到 `/etc/XrayR/config.yml` 时自动迁移**（`config.yml` 以及 dns/route/出入站/规则列表、geo 文件、XrayR 已签发的证书），XrayR 的文件只读、不会被修改；没有 XrayR 时生成默认配置；
-4. 缺少 `geoip.dat` / `geosite.dat` 时自动下载（OpenWRT 默认不下载，约 27 MB，需要时加 `--with-geo`）；
-5. 运行 `W1nCray check --online`：向面板拉取每个节点并实际构建入站，不监听端口；
-6. **XrayR 仍在运行时不会启动 W1nCray**（端口冲突），确认后再切换。
-
-### 管理命令（装好后直接输入 `W1nCray`）
+Supports three service managers: systemd (Debian/Ubuntu/CentOS, etc.), OpenRC (Alpine), and procd (OpenWRT). The script is POSIX sh and only depends on tools that busybox provides.
 
 ```bash
-W1nCray                      # 管理菜单
-W1nCray status               # 版本、运行状态、开机自启、节点数、最近错误
-W1nCray log [-n 100]         # 实时日志（-n 只看最近若干行）
-W1nCray check                # 检查配置并向面板验证每个节点
-W1nCray start|stop|restart   # 服务控制
-W1nCray enable|disable       # 开机自启
-W1nCray config               # 编辑配置，保存后可立即检查
-W1nCray update [vX.Y.Z] [--lite|--full]
-W1nCray switch               # 停用 XrayR、启用 W1nCray；5 秒内未正常运行会自动回滚
-W1nCray rollback             # 随时回到 XrayR
-W1nCray migrate              # 重新迁移（先把现有 /etc/W1nCray 备份为 /etc/W1nCray.bak.<时间>）
-W1nCray uninstall [--purge]  # 卸载（--purge 同时删除配置）
+# One-line install (use either curl or wget; OpenWRT has no curl, so use wget)
+(curl -fsSL -o /tmp/XrayW-install.sh https://raw.githubusercontent.com/W1nCwC/XrayW/main/install.sh \
+  || wget -O /tmp/XrayW-install.sh https://raw.githubusercontent.com/W1nCwC/XrayW/main/install.sh) \
+  && sh /tmp/XrayW-install.sh install
+# Or use a locally built binary
+sh install.sh install --binary ./XrayW-linux-amd64
 ```
 
-其余子命令（`version`、`x25519`、`init`、带参数的 `migrate` / `check` 等）原样交给程序本体。
+Install options: `--lite | --full` (build flavor), `--prefix DIR` (install directory; point it at external storage when space is short), `--with-geo` (force the geo files to be downloaded), `--version vX.Y.Z`, `--url URL`, `--binary FILE`.
 
-### Alpine / OpenWRT 说明
+The install script will:
 
-- **Alpine**：用 OpenRC 的 `supervise-daemon` 托管，崩溃后每 10 秒无限重启，日志在 `/var/log/W1nCray.log`。
-- **OpenWRT**：用 procd 托管（`respawn 3600 10 0`），日志用 `logread -e W1nCray`；默认安装精简版（`-lite`，约 39 MB，ACME DNS 验证仅含 alidns / cloudflare / dnspod / godaddy / namesilo / tencentcloud），内存小于 1 GiB 时自动设置 `GOMEMLIMIT`。路由器内置闪存通常装不下，请把外部存储挂载（extroot 或 USB/SD）后用 `--prefix /mnt/xxx/W1nCray` 安装。配置与服务脚本会写入 `/etc/sysupgrade.conf`，固件升级后保留配置，但程序文件需要重新执行安装命令。
-- 精简版缺少的 DNS 提供商可用 `W1nCray update --full` 换回完整版。
-- 同一份配置同一时间只允许一个 W1nCray 实例（`<配置文件>.lock`），避免多进程互相踢掉面板 WebSocket。
-- 从 XrayR 迁移时，路由里的旧入站 tag（形如 `V2ray_0.0.0.0_65534`）会自动映射到对应节点的入站，无需修改 `route.json`。
+1. Pick the asset that matches the CPU (amd64 / 386 / arm64 / armv5-7 / mips / mipsle / mips64(le) / riscv64 / loong64). MIPS byte order is read from the ELF header and ARM VFP support from `/proc/cpuinfo`. If the self-check of the binary fails, it falls back to a build with lower requirements. The download is verified against `SHA256SUMS`.
+2. Install to `/usr/local/XrayW/XrayW`, use `/etc/XrayW` as the config directory, register the service `XrayW`, and place the management command at `/usr/local/bin/XrayW` (`/usr/bin/XrayW` on OpenWRT).
+3. **Automatically migrate when `/etc/XrayR/config.yml` is found**: `config.yml`, the dns/route/inbound/outbound/rule lists, the geo files, and the certificates XrayR has already issued. XrayR's files are only read and are never modified. Without XrayR, a default config is generated.
+4. Download `geoip.dat` / `geosite.dat` when they are missing (OpenWRT does not download them by default because they are about 27 MB; add `--with-geo` if you need them).
+5. Run `XrayW check --online`: fetch every node from the panel and build its inbound for real, without listening on any port.
+6. **XrayW will not start while XrayR is still running** (the ports would conflict). Switch over after you have confirmed the setup.
 
-### 命令（程序本体）
+### Management commands (type `XrayW` after installation)
 
 ```bash
-W1nCray -c /etc/W1nCray/config.yml                     # 运行
-W1nCray migrate --from /etc/XrayR --to /etc/W1nCray    # 迁移 XrayR（--dry-run 只预览，--force 覆盖）
-W1nCray check -c /etc/W1nCray/config.yml [--online]    # 检查配置（--online 同时向面板验证节点）
-W1nCray init --dir /etc/W1nCray                        # 写入默认配置
-W1nCray version                                        # 版本、内核版本与构建类型（full / lite）
-W1nCray x25519                                         # 生成 REALITY 密钥对
+XrayW                      # Management menu
+XrayW status               # Version, running state, start on boot, node count, recent errors
+XrayW log [-n 100]         # Live logs (-n shows only the last N lines)
+XrayW check                # Check the config and verify each node with the panel
+XrayW start|stop|restart   # Service control
+XrayW enable|disable       # Start on boot
+XrayW config               # Edit the config; you can check it right after saving
+XrayW update [vX.Y.Z] [--lite|--full]
+XrayW switch               # Disable XrayR and enable XrayW; rolls back automatically if it is not running normally within 5 seconds
+XrayW rollback             # Go back to XrayR at any time
+XrayW migrate              # Migrate again (the existing /etc/XrayW is first backed up to /etc/XrayW.bak.<timestamp>)
+XrayW uninstall [--purge]  # Uninstall (--purge also deletes the config)
 ```
 
-面板路由中使用 `geosite:` / `geoip:` 时需要 `geosite.dat`、`geoip.dat`（默认从配置文件所在目录查找，也可用环境变量 `XRAY_LOCATION_ASSET` 指定）。
+Other subcommands (`version`, `x25519`, `init`, and `migrate` / `check` with arguments, etc.) are passed unchanged to the program itself.
 
-### 编译与发布
+### Alpine / OpenWRT notes
+
+- **Alpine**: supervised by OpenRC's `supervise-daemon`. After a crash it restarts every 10 seconds, with no limit. Logs go to `/var/log/XrayW.log`.
+- **OpenWRT**: supervised by procd (`respawn 3600 10 0`). Logs are read with `logread -e XrayW`. The default install is the lite build (`-lite`, about 39 MB; its ACME DNS validation covers only alidns / cloudflare / dnspod / godaddy / namesilo / tencentcloud). `GOMEMLIMIT` is set automatically when RAM is below 1 GiB. A router's built-in flash usually cannot hold the binary, so mount external storage (extroot or USB/SD) and install with `--prefix /mnt/xxx/XrayW`. The config and service scripts are added to `/etc/sysupgrade.conf`, so the config survives a firmware upgrade, but the program files must be reinstalled by running the install command again.
+- If a DNS provider is missing from the lite build, run `XrayW update --full` to switch to the full build.
+- Only one XrayW instance may run for the same config at a time (`<config file>.lock`). This prevents several processes from kicking each other off the panel WebSocket.
+- When migrating from XrayR, old inbound tags in the routing (such as `V2ray_0.0.0.0_65534`) are mapped automatically to the matching node inbounds, so `route.json` does not need to be edited.
+
+### Commands (the program itself)
 
 ```bash
-bash release/build.sh v0.3.0 [arch ...]   # 默认 12 个架构 × full/lite；产出 .gz 与 SHA256SUMS
+XrayW -c /etc/XrayW/config.yml                     # Run
+XrayW migrate --from /etc/XrayR --to /etc/XrayW    # Migrate XrayR (--dry-run only previews, --force overwrites)
+XrayW check -c /etc/XrayW/config.yml [--online]    # Check the config (--online also verifies nodes with the panel)
+XrayW init --dir /etc/XrayW                        # Write the default config
+XrayW version                                      # Version, kernel version and build flavor (full / lite)
+XrayW x25519                                       # Generate a REALITY key pair
 ```
 
-产物：`W1nCray-linux-<arch>.gz`、`W1nCray-linux-<arch>-lite.gz`，另保留 `W1nCray-linux-amd64|arm64` 裸文件供 v0.3.0 之前的安装脚本升级。把 `dist/` 里的文件全部上传到 GitHub Release 即可。lite 构建标签：`dnslite,fallbackroots`。
+When panel routes use `geosite:` / `geoip:`, `geosite.dat` and `geoip.dat` are required. They are looked up in the config file's directory by default, or you can set the `XRAY_LOCATION_ASSET` environment variable to point elsewhere.
 
-## 配置
+### Build and release
 
-完整示例见 [release/config/config.yml.example](release/config/config.yml.example)。最小配置：
+```bash
+bash release/build.sh v1.0.0 [arch ...]   # Default: 12 architectures × full/lite; produces .gz files and SHA256SUMS
+```
+
+Outputs: `XrayW-linux-<arch>.gz` and `XrayW-linux-<arch>-lite.gz`. Uncompressed copies are no longer produced. Upload every file in `dist/` to a GitHub Release. Lite build tags: `dnslite,fallbackroots`.
+
+## Configuration
+
+For a full example, see [release/config/config.yml.example](release/config/config.yml.example). Minimal config:
 
 ```yaml
 Log:
@@ -123,73 +124,73 @@ Nodes:
   - PanelType: Xboard
     ApiConfig:
       ApiHost: "https://xboard.example.com"
-      ApiKey: "通讯密钥"
+      ApiKey: "communication key"
       NodeID: 1
 ```
 
-修改配置文件（及其引用的 dns/route/出入站/规则文件）后会自动重载。
+After you change the config file (or the dns/route/inbound/outbound/rule files it references), it reloads automatically.
 
-### 从 XrayR 迁移
+### Migrating from XrayR
 
-推荐用安装脚本或 `W1nCray migrate` 自动迁移，它会逐项打印做了什么。转换规则：
+We recommend migrating with the install script or `XrayW migrate`. Either one prints every step it takes. Conversion rules:
 
-| XrayR | W1nCray |
+| XrayR | XrayW |
 |---|---|
-| `/etc/XrayR/...` 路径（含注释中的路径） | `/etc/W1nCray/...`，被引用的文件一并复制；XrayR 目录外的路径保留并提示 |
-| `PanelType: NewV2board / V2board` | `Xboard`；SSpanel 等其他面板的节点会被移除并提示 |
-| `NodeType: V2ray` + `EnableVless: true` | `NodeType: vless`（与 XrayR 发给面板的 node_type 一致），删除 EnableVless/VlessFlow |
-| `DisableLocalREALITYConfig: true` | `EnableREALITY: false`（即使用面板 REALITY） |
-| `DisableIVCheck`、`GlobalDeviceLimitConfig` | 删除（后者改用 Xboard 自带的跨节点设备统计，无需 Redis） |
-| XrayR 申请的 ACME 证书（`cert/certificates/<域名>.crt`） | 复制到 W1nCray 证书路径，不重新签发 |
-| dns.json / route.json / custom_*.json / rulelist | 原样复制，再用新内核逐条检查，不兼容项会指出文件和第几条 |
+| `/etc/XrayR/...` paths (including paths in comments) | `/etc/XrayW/...`. Referenced files are copied along with the config. Paths outside the XrayR directory are kept and a warning is shown |
+| `PanelType: NewV2board / V2board` | `Xboard`. Nodes for other panels such as SSpanel are removed, with a warning |
+| `NodeType: V2ray` + `EnableVless: true` | `NodeType: vless` (matches the node_type XrayR sends to the panel). EnableVless and VlessFlow are deleted |
+| `DisableLocalREALITYConfig: true` | `EnableREALITY: false` (use the panel REALITY) |
+| `DisableIVCheck`, `GlobalDeviceLimitConfig` | Deleted. The latter is replaced by Xboard's built-in cross-node device statistics, so Redis is not needed |
+| ACME certificates issued by XrayR (`cert/certificates/<domain>.crt`) | Copied to the XrayW certificate path. Not re-issued |
+| dns.json / route.json / custom_*.json / rulelist | Copied as they are, then checked entry by entry with the new kernel. Incompatible items are reported with the file name and entry number |
 
-迁移后需注意：
+Things to note after migrating:
 
-- XrayR 的 REALITY 只在 `DisableLocalREALITYConfig: true` 时使用面板配置；W1nCray 在面板节点 `tls=2` 时直接使用面板 REALITY。
-- `SendIP: 0.0.0.0` 现在表示由系统选择出口地址（XrayR 会绑定 IPv4，导致无法访问 IPv6 目标）。
-- 自定义出站中的 `allowInsecure` 已被 Xray v26 移除，`check` 会提示改用 `pinnedPeerCertSha256`。
+- XrayR uses the panel's REALITY settings only when `DisableLocalREALITYConfig: true`. XrayW uses the panel REALITY directly when the panel node has `tls=2`.
+- `SendIP: 0.0.0.0` now means the system chooses the outbound address. XrayR bound to IPv4, which made IPv6 destinations unreachable.
+- Xray v26 has removed `allowInsecure` from custom outbounds. `check` will suggest `pinnedPeerCertSha256` instead.
 
-### 面板 WebSocket（实时同步）
+### Panel WebSocket (real-time sync)
 
-Xboard 开启节点 WebSocket 后（后台开关 + 运行 `ws-server`），W1nCray 会通过 `/api/v2/server/handshake` 自动发现并连接，无需配置：
+When WebSocket is enabled for the node in Xboard (a switch in the admin panel, plus running `ws-server`), XrayW discovers and connects automatically through `/api/v2/server/handshake`. No configuration is needed:
 
-- 用户新增/封禁/超流量/到期、节点配置修改：**秒级生效**（不再等待 `pull_interval`）；
-- 在线 IP **实时上报**：新 IP 接入后约 1 秒内上报，断开 30 秒（宽限期，避免短连接导致在线数抖动）后上报下线，未变化时每 60 秒刷新；并接收面板下发的全网设备 IP，跨节点设备限制与 Xboard 的计数方式一致；
-- 未使用 WebSocket 时在线 IP 同样实时经 HTTP 上报（间隔 ≥5 秒）；但 Xboard 的 HTTP 接口无法表示"下线"，下线的 IP 要等面板 300 秒过期；
-- 流量与负载仍走 HTTP；HTTP 轮询始终保留，WebSocket 断开时自动重连并回退，不影响节点工作；
-- 不想使用时设置 `ControllerConfig.DisableWebSocket: true`。
+- User add / ban / over-traffic / expiry, and node configuration changes: **take effect within seconds** (no longer waiting for `pull_interval`).
+- Online IPs are **reported in real time**. A new IP is reported within about 1 second of connecting. After a disconnect, the IP is reported as offline 30 seconds later; this grace period keeps short connections from making the online count flap. If nothing has changed, the state is refreshed every 60 seconds. XrayW also receives the device IPs for the whole network from the panel, so cross-node device limits are counted the same way Xboard counts them.
+- Without WebSocket, online IPs are still reported in real time over HTTP (interval ≥ 5 seconds). However, Xboard's HTTP API cannot express "offline", so an offline IP stays until the panel expires it after 300 seconds.
+- Traffic and load are still reported over HTTP. HTTP polling is always kept as a fallback. When WebSocket disconnects, it reconnects automatically and the node keeps running normally in the meantime.
+- To disable it, set `ControllerConfig.DisableWebSocket: true`.
 
-面板侧要点：若 Xboard 用自定义 compose 以 `octane:start` 覆盖了启动命令，内置的 Caddy 与 ws-server 不会启动，需要单独运行 `php artisan ws-server start` 并在 Nginx 中把 `/ws` 反代到它（`proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection "upgrade";`）。
+Panel side: if Xboard uses a custom compose file that overrides the startup command with `octane:start`, the built-in Caddy and ws-server will not start. Run `php artisan ws-server start` separately and reverse-proxy `/ws` to it in Nginx (`proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection "upgrade";`).
 
-### 规则与行为说明
+### Routing and behavior notes
 
-- **路由顺序**：节点安全规则（内网屏蔽）→ 面板路由 / 自定义路由 / 本地 RuleList → 全局 `route.json` → 节点兜底出站。所有节点规则都限定在本节点入站上，互不影响。
-- **面板路由 match**：按 Xboard 后台写法 `example.com`、`*.example.com` 匹配域名及子域名；也支持 Xray 原生前缀（`domain:`、`full:`、`regexp:`、`geosite:`、`geoip:` 等）、IP/CIDR；含正则特殊字符的条目按正则处理（兼容 XrayR 时代的写法）。
-- **proxy 动作**：`action_value` 为面板该节点 `custom_outbounds` 中的 tag，或本地 `custom_outbound.json` 中的 tag。
-- **dns 动作**：作为 Xray DNS 服务器生效；面板 DNS 路由变更会触发一次整体重载。
-- **custom_outbounds / custom_routes**：按 Xray 原生 outbound / routing rule JSON 解释（同时兼容 Xboard-Node 的 `{tag, protocol, settings, proxy_tag}` 写法）。
-- **证书**：节点下发 `cert_config` 时优先使用面板配置，否则使用本地 `CertConfig`。证书文件每小时被 Xray 自动重新加载，到期前 30 天自动续期。
-- **限速**：面板 `speed_limit`（Mbps）作用于每个用户在本节点的上行与下行（各自独立计算）；本地 `SpeedLimit > 0` 时覆盖面板值。
-- **设备数**：同一用户在本节点的不同源 IP 数，加上 Xboard 统计到的其他节点上的设备数，超过 `device_limit` 时拒绝新 IP。
+- **Route order**: node security rules (internal address blocking) → panel routes / custom routes / local RuleList → global `route.json` → node fallback outbound. All node rules apply only to that node's inbound, so they do not affect each other.
+- **Panel route match**: domains are matched as written in the Xboard admin panel, such as `example.com` and `*.example.com`, which cover the domain and its subdomains. Xray native prefixes (`domain:`, `full:`, `regexp:`, `geosite:`, `geoip:`, etc.) and IP/CIDR are also supported. Entries that contain regex special characters are treated as regular expressions, for compatibility with XrayR-era configs.
+- **proxy action**: `action_value` is a tag from the node's `custom_outbounds` on the panel, or a tag in the local `custom_outbound.json`.
+- **dns action**: takes effect as an Xray DNS server. Changing a DNS route on the panel triggers a full reload.
+- **custom_outbounds / custom_routes**: interpreted as native Xray outbound and routing-rule JSON. The Xboard-Node format `{tag, protocol, settings, proxy_tag}` is also accepted.
+- **Certificates**: when a node delivers `cert_config`, the panel config is used first. Otherwise the local `CertConfig` is used. Xray reloads certificate files every hour, and they are renewed automatically 30 days before expiry.
+- **Speed limit**: the panel's `speed_limit` (Mbps) applies to each user's upload and download on this node, and each direction is calculated independently. A local `SpeedLimit > 0` overrides the panel value.
+- **Device count**: the number of distinct source IPs a user has on this node, plus the devices Xboard counts on other nodes. New IPs are rejected when the total exceeds `device_limit`.
 
-## 已知限制
+## Known Limitations
 
-- REALITY：每次启动后，第一个连接到某个 target 的握手会等待约 5 秒（Xray 的 REALITY 库在探测 target 的握手特征，属上游行为）。
-- mKCP：Xray v26 把 header/seed 迁到了 finalmask，W1nCray 会自动转换，但与旧客户端的兼容性未经实测。
-- Xray v26 **客户端**已移除 `allowInsecure`（改为 `pinnedPeerCertSha256`）。使用自签证书（`cert_mode: self`）时，新版客户端需配置证书指纹。
-- 所有节点运行在同一个 Xray 实例中，因此共享 DNS 与全局路由配置。
+- REALITY: after each start, the first handshake to a given target waits about 5 seconds. The Xray REALITY library probes the target's handshake characteristics; this is upstream behavior.
+- mKCP: Xray v26 moved header/seed into finalmask. XrayW converts them automatically, but compatibility with older clients has not been tested.
+- Xray v26 **clients** have removed `allowInsecure` (replaced by `pinnedPeerCertSha256`). When you use a self-signed certificate (`cert_mode: self`), newer clients must be configured with the certificate fingerprint.
+- All nodes run in the same Xray instance, so they share the DNS and global routing configuration.
 
-## 开发
+## Development
 
 ```bash
-go test ./...            # 单元测试 + 端到端测试（真实 Xray 客户端经各协议代理）
-go run ./tools/protogen  # 重新生成 app/dispatcher/config.pb.go（无需 protoc）
-sh tests/install_test.sh # 安装脚本测试（dash / busybox ash / bash 均可，不碰系统）
-go test -tags dnslite,fallbackroots ./common/cert/ ./core/ # lite 构建
+go test ./...            # Unit tests and end-to-end tests (real Xray clients through each protocol proxy)
+go run ./tools/protogen  # Regenerate app/dispatcher/config.pb.go (no protoc needed)
+sh tests/install_test.sh # Install script tests (works with dash, busybox ash and bash; does not touch the system)
+go test -tags dnslite,fallbackroots ./common/cert/ ./core/ # Lite build
 ```
 
-设计与验证记录见 [docs/PLAN.md](docs/PLAN.md)、[docs/PLAN-v2-migration.md](docs/PLAN-v2-migration.md)。
+Design and verification notes: [docs/PLAN.md](docs/PLAN.md), [docs/PLAN-v2-migration.md](docs/PLAN-v2-migration.md).
 
-## 许可
+## License
 
-[MPL-2.0](LICENSE)。本项目参考了 XrayR（MPL-2.0）的设计与配置格式，基于 Xray-core（MPL-2.0）构建；`migrate/testdata/xrayr-v0.9.4/` 为 XrayR 原版示例文件，仅作迁移测试样本。
+[MPL-2.0](LICENSE). This project follows the design and configuration format of XrayR (MPL-2.0) and is built on Xray-core (MPL-2.0). `migrate/testdata/xrayr-v0.9.4/` contains the original XrayR sample files, which are used only as migration test fixtures.
