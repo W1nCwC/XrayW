@@ -1,8 +1,8 @@
 // Package migrate converts an XrayR installation (config.yml and the files it
-// references) into a W1nCray configuration. The XrayR directory is only read.
+// references) into an XrayW configuration. The XrayR directory is only read.
 //
 // Only unambiguous conversions are applied; JSON files are copied verbatim and
-// checked afterwards with the new kernel (see `W1nCray check`).
+// checked afterwards with the new kernel (see `XrayW check`).
 package migrate
 
 import (
@@ -17,13 +17,13 @@ import (
 
 	yaml "go.yaml.in/yaml/v3"
 
-	"github.com/W1nCwC/W1nCray/common/cert"
+	"github.com/W1nCwC/XrayW/common/cert"
 )
 
 // Options configures a migration.
 type Options struct {
 	From   string // XrayR directory or its config.yml
-	To     string // W1nCray directory
+	To     string // XrayW directory
 	DryRun bool
 	Force  bool // overwrite existing files in To
 	// SearchDirs are extra places for geo files and XrayR ACME certificates.
@@ -84,13 +84,13 @@ func (r *Report) String() string {
 	return b.String()
 }
 
-// Keys whose values are files W1nCray reads (copied when inside the XrayR dir).
+// Keys whose values are files XrayW reads (copied when inside the XrayR dir).
 var fileKeys = map[string]bool{
 	"DnsConfigPath": true, "RouteConfigPath": true, "InboundConfigPath": true,
 	"OutboundConfigPath": true, "RuleListPath": true, "CertFile": true, "KeyFile": true,
 }
 
-// Keys whose values are paths W1nCray writes (rewritten, not copied).
+// Keys whose values are paths XrayW writes (rewritten, not copied).
 var logKeys = map[string]bool{"AccessPath": true, "ErrorPath": true}
 
 // Files of a default XrayR install, copied even when not referenced.
@@ -164,7 +164,7 @@ func Run(opts Options) (*Report, error) {
 	m.planKnownFiles()
 
 	var out bytes.Buffer
-	fmt.Fprintf(&out, "# Migrated from XrayR (%s) by `W1nCray migrate` on %s\n", srcConfig, time.Now().Format("2006-01-02 15:04:05"))
+	fmt.Fprintf(&out, "# Migrated from XrayR (%s) by `XrayW migrate` on %s\n", srcConfig, time.Now().Format("2006-01-02 15:04:05"))
 	enc := yaml.NewEncoder(&out)
 	enc.SetIndent(2)
 	if err := enc.Encode(&doc); err != nil {
@@ -182,7 +182,7 @@ func samePath(a, b string) bool {
 	return filepath.Clean(a) == filepath.Clean(b)
 }
 
-// rewrite maps a path inside the XrayR dir to the W1nCray dir.
+// rewrite maps a path inside the XrayR dir to the XrayW dir.
 func (m *migration) rewrite(p string) (string, bool) {
 	if p == "" {
 		return p, false
@@ -225,7 +225,7 @@ func (m *migration) convert(root *yaml.Node) error {
 	}
 	nodes.Content = kept
 	if m.realityNote {
-		m.report.warn("XrayR 仅在 DisableLocalREALITYConfig: true 时使用面板 REALITY；W1nCray 在面板节点 tls=2 时直接使用面板 REALITY 配置")
+		m.report.warn("XrayR 仅在 DisableLocalREALITYConfig: true 时使用面板 REALITY；XrayW 在面板节点 tls=2 时直接使用面板 REALITY 配置")
 	}
 	if len(kept) == 0 {
 		return errors.New("no XrayR node uses a supported panel (V2board/NewV2board/Xboard)")
@@ -257,7 +257,7 @@ func (m *migration) convertPath(key string, v *yaml.Node) {
 	newPath, inside := m.rewrite(v.Value)
 	if !inside {
 		if fileKeys[key] && filepath.IsAbs(v.Value) {
-			m.report.warn("%s: %s 不在 XrayR 目录内，保留原路径（请确认 W1nCray 有权限读取）", key, v.Value)
+			m.report.warn("%s: %s 不在 XrayR 目录内，保留原路径（请确认 XrayW 有权限读取）", key, v.Value)
 		}
 		return
 	}
@@ -301,7 +301,7 @@ func (m *migration) convertNode(i int, n *yaml.Node) bool {
 			pt.Value = "Xboard"
 		case "xboard", "":
 		default:
-			m.report.warn("%s: PanelType %s 不受支持（W1nCray 仅对接 Xboard），已从迁移结果中移除", label, pt.Value)
+			m.report.warn("%s: PanelType %s 不受支持（XrayW 仅对接 Xboard），已从迁移结果中移除", label, pt.Value)
 			return false
 		}
 	}
@@ -331,7 +331,7 @@ func (m *migration) convertNode(i int, n *yaml.Node) bool {
 	if v := mapGet(cc, "DisableLocalREALITYConfig"); v != nil {
 		if strings.EqualFold(v.Value, "true") {
 			// XrayR used the panel REALITY settings only with this flag;
-			// W1nCray uses them by default and EnableREALITY means "local".
+			// XrayW uses them by default and EnableREALITY means "local".
 			mapSet(cc, "EnableREALITY", "false", "!!bool")
 			m.report.change("%s: DisableLocalREALITYConfig: true -> EnableREALITY: false（使用面板 REALITY 配置）", label)
 		}
@@ -379,7 +379,7 @@ func nodeType(t string, enableVless bool) string {
 	}
 }
 
-// planACMECert copies a certificate issued by XrayR so W1nCray does not have
+// planACMECert copies a certificate issued by XrayR so XrayW does not have
 // to request a new one (Let's Encrypt rate limits).
 func (m *migration) planACMECert(label string, c *yaml.Node) {
 	mode := strings.ToLower(scalar(c, "CertMode"))
@@ -388,7 +388,7 @@ func (m *migration) planACMECert(label string, c *yaml.Node) {
 		return
 	}
 	if mode == cert.ModeDNS && !cert.DNSProviderSupported(scalar(c, "Provider")) {
-		m.report.warn("%s: 证书使用 DNS 供应商 %q，当前程序是 %s 版，不包含它；请安装完整版（W1nCray update --full），否则 W1nCray 无法自动续期该证书", label, scalar(c, "Provider"), cert.BuildFlavor)
+		m.report.warn("%s: 证书使用 DNS 供应商 %q，当前程序是 %s 版，不包含它；请安装完整版（XrayW update --full），否则 XrayW 无法自动续期该证书", label, scalar(c, "Provider"), cert.BuildFlavor)
 	}
 	cfg := &cert.Config{CertDomain: domain, CertFile: scalar(c, "CertFile"), KeyFile: scalar(c, "KeyFile")}
 	dstCert, dstKey := cert.TargetPaths(filepath.Join(m.toDir, "cert"), cfg)
@@ -404,7 +404,7 @@ func (m *migration) planACMECert(label string, c *yaml.Node) {
 			return
 		}
 	}
-	m.report.warn("%s: 未找到 XrayR 为 %s 签发的有效证书；仅当该节点在面板启用 TLS 时需要，届时 W1nCray 会自动申请", label, domain)
+	m.report.warn("%s: 未找到 XrayR 为 %s 签发的有效证书；仅当该节点在面板启用 TLS 时需要，届时 XrayW 会自动申请", label, domain)
 }
 
 func (m *migration) planKnownFiles() {

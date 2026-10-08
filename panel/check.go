@@ -9,9 +9,9 @@ import (
 
 	xlog "github.com/xtls/xray-core/common/log"
 
-	"github.com/W1nCwC/W1nCray/common/cert"
-	"github.com/W1nCwC/W1nCray/core"
-	"github.com/W1nCwC/W1nCray/node"
+	"github.com/W1nCwC/XrayW/common/cert"
+	"github.com/W1nCwC/XrayW/core"
+	"github.com/W1nCwC/XrayW/node"
 )
 
 // Check validates a config file without serving traffic. Offline it checks
@@ -94,7 +94,7 @@ func (f warningFilter) Handle(msg xlog.Message) {
 }
 
 // reportLegacyTags lists XrayR-style inbound tags (V2ray_0.0.0.0_65534) in
-// route.json. They keep working: W1nCray maps them to the node listening on
+// route.json. They keep working: XrayW maps them to the node listening on
 // that port; the report says which node, and recommends the new tag.
 func reportLegacyTags(w io.Writer, cfg *Config, nodePorts map[int]string, online bool) {
 	refs, err := core.LegacyTagsInRoute(cfg.RouteConfigPath, cfg.InboundConfigPath)

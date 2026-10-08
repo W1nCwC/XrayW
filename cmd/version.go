@@ -6,10 +6,10 @@ import (
 	"github.com/spf13/cobra"
 	xcore "github.com/xtls/xray-core/core"
 
-	"github.com/W1nCwC/W1nCray/common/cert"
+	"github.com/W1nCwC/XrayW/common/cert"
 )
 
-// Set at build time with -ldflags "-X github.com/W1nCwC/W1nCray/cmd.version=...".
+// Set at build time with -ldflags "-X github.com/W1nCwC/XrayW/cmd.version=...".
 var version = "dev"
 
 func init() {
@@ -23,5 +23,5 @@ func init() {
 }
 
 func showVersion() {
-	fmt.Printf("W1nCray %s (Xray-core %s, %s)\n", version, xcore.Version(), cert.BuildFlavor)
+	fmt.Printf("XrayW %s (Xray-core %s, %s)\n", version, xcore.Version(), cert.BuildFlavor)
 }

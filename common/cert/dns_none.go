@@ -12,7 +12,7 @@ import (
 const BuildFlavor = "none"
 
 func newDNSProvider(name string) (challenge.Provider, error) {
-	return nil, fmt.Errorf("DNS-01 证书不在当前构建（none 版）中；请改用 http / tls / file 模式，或安装完整版: W1nCray update --full")
+	return nil, fmt.Errorf("DNS-01 证书不在当前构建（none 版）中；请改用 http / tls / file 模式，或安装完整版: XrayW update --full")
 }
 
 // DNSProviderSupported is always false in this build.

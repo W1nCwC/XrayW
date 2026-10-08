@@ -33,7 +33,7 @@ func TestLiteBuildProviders(t *testing.T) {
 	}
 	// An unsupported provider tells the user how to fix it.
 	_, err := newDNSProvider("route53")
-	if err == nil || !strings.Contains(err.Error(), "route53") || !strings.Contains(err.Error(), "W1nCray update --full") {
+	if err == nil || !strings.Contains(err.Error(), "route53") || !strings.Contains(err.Error(), "XrayW update --full") {
 		t.Fatalf("unsupported provider error: %v", err)
 	}
 }

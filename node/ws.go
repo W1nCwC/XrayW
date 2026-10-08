@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/W1nCwC/W1nCray/api/xboard"
+	"github.com/W1nCwC/XrayW/api/xboard"
 )
 
 // wsReportInterval is how often node.status goes over the WebSocket.

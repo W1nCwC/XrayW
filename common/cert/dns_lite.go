@@ -68,7 +68,7 @@ func newDNSProvider(name string) (challenge.Provider, error) {
 	if f, ok := liteProviders[name]; ok {
 		return f()
 	}
-	return nil, fmt.Errorf("DNS 供应商 %q 不在当前构建（lite 版，仅含 alidns / cloudflare / dnspod / godaddy / namesilo / tencentcloud）中；请安装完整版: W1nCray update --full", name)
+	return nil, fmt.Errorf("DNS 供应商 %q 不在当前构建（lite 版，仅含 alidns / cloudflare / dnspod / godaddy / namesilo / tencentcloud）中；请安装完整版: XrayW update --full", name)
 }
 
 // DNSProviderSupported reports whether DNS-01 can use the provider in this build.

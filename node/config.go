@@ -5,7 +5,7 @@ package node
 import (
 	"time"
 
-	"github.com/W1nCwC/W1nCray/common/cert"
+	"github.com/W1nCwC/XrayW/common/cert"
 )
 
 // APIConfig is the "ApiConfig" section of a node (XrayR compatible).

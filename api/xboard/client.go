@@ -155,7 +155,7 @@ func (c *Client) attempt(ctx context.Context, method, name string, body any, eta
 		return nil, c.redact(err)
 	}
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", "W1nCray")
+	req.Header.Set("User-Agent", "XrayW")
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}

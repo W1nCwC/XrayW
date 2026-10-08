@@ -5,7 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/W1nCwC/W1nCray/panel"
+	"github.com/W1nCwC/XrayW/panel"
 )
 
 var checkOnline bool

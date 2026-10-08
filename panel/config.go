@@ -1,4 +1,4 @@
-// Package panel loads the W1nCray config and runs the Xray instance with one
+// Package panel loads the XrayW config and runs the Xray instance with one
 // controller per configured Xboard node.
 package panel
 
@@ -9,7 +9,7 @@ import (
 
 	"github.com/spf13/viper"
 
-	"github.com/W1nCwC/W1nCray/node"
+	"github.com/W1nCwC/XrayW/node"
 )
 
 // Config is the root of config.yml (XrayR compatible layout).
@@ -94,7 +94,7 @@ func (c *Config) validate() error {
 		switch strings.ToLower(n.PanelType) {
 		case "", "xboard", "newv2board", "v2board":
 		default:
-			return fmt.Errorf("config: Nodes[%d]: unsupported PanelType %q (W1nCray supports Xboard)", i, n.PanelType)
+			return fmt.Errorf("config: Nodes[%d]: unsupported PanelType %q (XrayW supports Xboard)", i, n.PanelType)
 		}
 		a := n.ApiConfig
 		if a.APIHost == "" || a.Key == "" || a.NodeID <= 0 {

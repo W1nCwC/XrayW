@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/W1nCwC/W1nCray/common/cert"
-	"github.com/W1nCwC/W1nCray/core"
-	"github.com/W1nCwC/W1nCray/panel"
+	"github.com/W1nCwC/XrayW/common/cert"
+	"github.com/W1nCwC/XrayW/core"
+	"github.com/W1nCwC/XrayW/panel"
 )
 
 // A typical XrayR config for a V2board/Xboard panel. {{FROM}} is the XrayR
@@ -106,7 +106,7 @@ func setupXrayR(t *testing.T) (from, to string) {
 	t.Helper()
 	root := t.TempDir()
 	from = filepath.ToSlash(filepath.Join(root, "XrayR"))
-	to = filepath.ToSlash(filepath.Join(root, "W1nCray"))
+	to = filepath.ToSlash(filepath.Join(root, "XrayW"))
 	write := func(rel string, data []byte) {
 		p := filepath.Join(from, rel)
 		os.MkdirAll(filepath.Dir(p), 0o755)
@@ -222,7 +222,7 @@ func TestMigrate(t *testing.T) {
 		}
 	}
 
-	// The ACME certificate lands where W1nCray's cert manager looks for it,
+	// The ACME certificate lands where XrayW's cert manager looks for it,
 	// so it is reused instead of requesting a new one.
 	cc := n1.ControllerConfig.CertConfig
 	cf, kf := cert.TargetPaths(filepath.Join(to, "cert"), cc)

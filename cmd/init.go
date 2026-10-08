@@ -26,7 +26,7 @@ func init() {
 			return writeDefaults(initDir, initForce)
 		},
 	}
-	c.Flags().StringVar(&initDir, "dir", "/etc/W1nCray", "target directory")
+	c.Flags().StringVar(&initDir, "dir", "/etc/XrayW", "target directory")
 	c.Flags().BoolVar(&initForce, "force", false, "overwrite existing files")
 	rootCmd.AddCommand(c)
 }

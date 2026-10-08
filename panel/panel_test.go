@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/W1nCwC/W1nCray/node"
+	"github.com/W1nCwC/XrayW/node"
 )
 
 func TestExampleConfigLoads(t *testing.T) {

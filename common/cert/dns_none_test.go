@@ -11,7 +11,7 @@ func TestNoneBuildHasNoDNS(t *testing.T) {
 	if BuildFlavor != "none" || DNSProviderSupported("cloudflare") {
 		t.Fatalf("flavor %q", BuildFlavor)
 	}
-	if _, err := newDNSProvider("cloudflare"); err == nil || !strings.Contains(err.Error(), "W1nCray update --full") {
+	if _, err := newDNSProvider("cloudflare"); err == nil || !strings.Contains(err.Error(), "XrayW update --full") {
 		t.Fatalf("err = %v", err)
 	}
 }

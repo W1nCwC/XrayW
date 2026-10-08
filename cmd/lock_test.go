@@ -12,10 +12,10 @@ import (
 	"time"
 )
 
-// With W1NCRAY_LOCK_HELPER set the test binary acts as a second W1nCray
+// With XRAYW_LOCK_HELPER set the test binary acts as a second XrayW
 // process: it takes the lock and holds it until it is killed.
 func TestMain(m *testing.M) {
-	if path := os.Getenv("W1NCRAY_LOCK_HELPER"); path != "" {
+	if path := os.Getenv("XRAYW_LOCK_HELPER"); path != "" {
 		l, err := acquireInstanceLock(path)
 		if err != nil {
 			os.Stdout.WriteString("LOCK-FAILED " + err.Error() + "\n")
@@ -37,7 +37,7 @@ func TestInstanceLockExcludesSecondInstance(t *testing.T) {
 	}
 	if _, err := acquireInstanceLock(cfg); err == nil {
 		t.Fatal("second instance acquired the lock")
-	} else if !strings.Contains(err.Error(), "已有 W1nCray 实例") || !strings.Contains(err.Error(), "PID "+strconv.Itoa(os.Getpid())) {
+	} else if !strings.Contains(err.Error(), "已有 XrayW 实例") || !strings.Contains(err.Error(), "PID "+strconv.Itoa(os.Getpid())) {
 		t.Fatalf("unhelpful error: %v", err)
 	}
 
@@ -60,7 +60,7 @@ func TestInstanceLockExcludesSecondInstance(t *testing.T) {
 func TestInstanceLockReleasedWhenHolderIsKilled(t *testing.T) {
 	cfg := filepath.Join(t.TempDir(), "config.yml")
 	cmd := exec.Command(os.Args[0])
-	cmd.Env = append(os.Environ(), "W1NCRAY_LOCK_HELPER="+cfg)
+	cmd.Env = append(os.Environ(), "XRAYW_LOCK_HELPER="+cfg)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		t.Fatal(err)

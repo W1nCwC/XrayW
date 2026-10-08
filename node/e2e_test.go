@@ -25,8 +25,8 @@ import (
 	xcore "github.com/xtls/xray-core/core"
 	"github.com/xtls/xray-core/infra/conf"
 
-	"github.com/W1nCwC/W1nCray/common/cert"
-	"github.com/W1nCwC/W1nCray/core"
+	"github.com/W1nCwC/XrayW/common/cert"
+	"github.com/W1nCwC/XrayW/core"
 )
 
 // ---- fake Xboard -------------------------------------------------------

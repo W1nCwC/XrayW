@@ -1,4 +1,4 @@
-// Package cmd implements the W1nCray command line.
+// Package cmd implements the XrayW command line.
 package cmd
 
 import (
@@ -11,13 +11,13 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/W1nCwC/W1nCray/panel"
+	"github.com/W1nCwC/XrayW/panel"
 )
 
 var configFile string
 
 var rootCmd = &cobra.Command{
-	Use:   "W1nCray",
+	Use:   "XrayW",
 	Short: "Xboard node backend built on the official Xray-core",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return run()
@@ -26,7 +26,7 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&configFile, "config", "c", "", "config file (default: ./config.yml, /etc/W1nCray/config.yml)")
+	rootCmd.PersistentFlags().StringVarP(&configFile, "config", "c", "", "config file (default: ./config.yml, /etc/XrayW/config.yml)")
 }
 
 // Execute runs the root command.
@@ -40,7 +40,7 @@ func findConfig() (string, error) {
 	if configFile != "" {
 		return filepath.Abs(configFile)
 	}
-	candidates := []string{"config.yml", "config.yaml", "/etc/W1nCray/config.yml"}
+	candidates := []string{"config.yml", "config.yaml", "/etc/XrayW/config.yml"}
 	if exe, err := os.Executable(); err == nil {
 		candidates = append(candidates, filepath.Join(filepath.Dir(exe), "config.yml"))
 	}

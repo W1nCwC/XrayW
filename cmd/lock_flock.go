@@ -32,7 +32,7 @@ func acquireInstanceLock(configPath string) (*instanceLock, error) {
 			if _, perr := strconv.Atoi(pid); perr != nil {
 				pid = "?"
 			}
-			return nil, fmt.Errorf("已有 W1nCray 实例在使用 %s 运行（PID %s）。请先停止它（W1nCray stop）或查看日志（W1nCray log）", configPath, pid)
+			return nil, fmt.Errorf("已有 XrayW 实例在使用 %s 运行（PID %s）。请先停止它（XrayW stop）或查看日志（XrayW log）", configPath, pid)
 		}
 		return nil, fmt.Errorf("lock %s: %w", path, err)
 	}

@@ -8,11 +8,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/W1nCwC/W1nCray/core"
+	"github.com/W1nCwC/XrayW/core"
 )
 
 // A route.json written for XrayR matches inbounds by "<Type>_<IP>_<Port>".
-// The same rule must keep working: W1nCray maps it to the node listening on
+// The same rule must keep working: XrayW maps it to the node listening on
 // that port, so traffic is really routed (here: blocked) by it.
 func TestE2EXrayRLegacyInboundTag(t *testing.T) {
 	tgt := target(t)
@@ -23,7 +23,7 @@ func TestE2EXrayRLegacyInboundTag(t *testing.T) {
 	}{
 		{"xrayr tag of this node's port", func(p int, _ string) string { return fmt.Sprintf("V2ray_0.0.0.0_%d", p) }, true},
 		{"xrayr tag of another port", func(p int, _ string) string { return fmt.Sprintf("V2ray_0.0.0.0_%d", p+1) }, false},
-		{"w1ncray node tag", func(_ int, host string) string { return "node1@" + host }, true},
+		{"xrayw node tag", func(_ int, host string) string { return "node1@" + host }, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			port := freePort(t, "tcp")
@@ -33,7 +33,7 @@ func TestE2EXrayRLegacyInboundTag(t *testing.T) {
 				t.Fatal(err)
 			}
 			route := filepath.Join(t.TempDir(), "route.json")
-			rule := fmt.Sprintf(`{"rules":[{"type":"field","inboundTag":["%s"],"outboundTag":"w1ncray-block"}]}`, tc.tagFor(port, u.Host))
+			rule := fmt.Sprintf(`{"rules":[{"type":"field","inboundTag":["%s"],"outboundTag":"xrayw-block"}]}`, tc.tagFor(port, u.Host))
 			if err := os.WriteFile(route, []byte(rule), 0o600); err != nil {
 				t.Fatal(err)
 			}

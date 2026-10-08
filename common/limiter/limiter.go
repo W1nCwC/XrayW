@@ -61,7 +61,7 @@ func (l *Limiter) Inbound(tag string) *Inbound {
 
 // Acquire admits a connection of the user identified by email coming from ip
 // on the inbound tag. A nil Session with a nil error means the connection is
-// not managed by W1nCray (unknown inbound or user) and must pass untouched.
+// not managed by XrayW (unknown inbound or user) and must pass untouched.
 func (l *Limiter) Acquire(tag, email, ip string) (*Session, error) {
 	in := l.Inbound(tag)
 	if in == nil {

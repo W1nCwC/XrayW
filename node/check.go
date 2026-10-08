@@ -12,8 +12,8 @@ import (
 
 	"github.com/xtls/xray-core/infra/conf"
 
-	"github.com/W1nCwC/W1nCray/api/xboard"
-	"github.com/W1nCwC/W1nCray/common/cert"
+	"github.com/W1nCwC/XrayW/api/xboard"
+	"github.com/W1nCwC/XrayW/common/cert"
 )
 
 // Check fetches the node from the panel and builds its inbound, outbounds and
@@ -113,7 +113,7 @@ func (c *Controller) checkCert(nc *xboard.NodeConfig) (paths *certPaths, note st
 	}
 	cf, kf := cert.TargetPaths(c.certs.Dir, cc)
 	if cc.CertMode == cert.ModeDNS && !cert.DNSProviderSupported(cc.Provider) {
-		return nil, "", cleanup, fmt.Errorf("证书使用 DNS 供应商 %q，当前程序是 %s 版，不包含它；请安装完整版: W1nCray update --full", cc.Provider, cert.BuildFlavor)
+		return nil, "", cleanup, fmt.Errorf("证书使用 DNS 供应商 %q，当前程序是 %s 版，不包含它；请安装完整版: XrayW update --full", cc.Provider, cert.BuildFlavor)
 	}
 	if _, err := tls.LoadX509KeyPair(cf, kf); err == nil {
 		return &certPaths{CertFile: cf, KeyFile: kf, RejectUnknownSNI: cc.RejectUnknownSni}, "证书: " + cf, cleanup, nil
@@ -126,7 +126,7 @@ func (c *Controller) checkCert(nc *xboard.NodeConfig) (paths *certPaths, note st
 			return nil, "", cleanup, fmt.Errorf("面板下发的证书无效: %w", err)
 		}
 	}
-	dir, err := os.MkdirTemp("", "w1ncray-check")
+	dir, err := os.MkdirTemp("", "xrayw-check")
 	if err != nil {
 		return nil, "", cleanup, err
 	}

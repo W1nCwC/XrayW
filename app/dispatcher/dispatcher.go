@@ -1,4 +1,4 @@
-// Package dispatcher provides the W1nCray dispatcher: Xray's own
+// Package dispatcher provides the XrayW dispatcher: Xray's own
 // DefaultDispatcher, created through its official config creator, wrapped with
 // per-user device limiting and rate limiting.
 //
@@ -20,7 +20,7 @@ import (
 	"github.com/xtls/xray-core/transport"
 	"github.com/xtls/xray-core/transport/pipe"
 
-	"github.com/W1nCwC/W1nCray/common/limiter"
+	"github.com/W1nCwC/XrayW/common/limiter"
 )
 
 // spliceForbidden is session.Inbound.CanSpliceCopy's "cannot" value. Splice
@@ -68,7 +68,7 @@ func (d *Dispatcher) Close() error {
 }
 
 // admit runs the device limit check for the user of this connection. A nil
-// session means the connection is not managed by W1nCray.
+// session means the connection is not managed by XrayW.
 func (d *Dispatcher) admit(ctx context.Context) (*limiter.Session, error) {
 	l := d.limiter.Load()
 	if l == nil {

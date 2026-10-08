@@ -6,7 +6,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/W1nCwC/W1nCray/api/xboard"
+	"github.com/W1nCwC/XrayW/api/xboard"
 )
 
 // Online IP reporting (docs/PLAN-v4-websocket.md §6): changes are reported

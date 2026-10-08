@@ -31,13 +31,13 @@ func run() error {
 	// Must stay in sync with app/dispatcher/config.proto. The registered
 	// file name carries the module prefix: protobuf rejects a second
 	// "app/dispatcher/config.proto", which xray-core already registers.
-	name := "github.com/W1nCwC/W1nCray/app/dispatcher/config.proto"
+	name := "github.com/W1nCwC/XrayW/app/dispatcher/config.proto"
 	fd := &descriptorpb.FileDescriptorProto{
 		Name:    proto.String(name),
-		Package: proto.String("w1ncray.app.dispatcher"),
+		Package: proto.String("xrayw.app.dispatcher"),
 		Syntax:  proto.String("proto3"),
 		Options: &descriptorpb.FileOptions{
-			GoPackage: proto.String("github.com/W1nCwC/W1nCray/app/dispatcher"),
+			GoPackage: proto.String("github.com/W1nCwC/XrayW/app/dispatcher"),
 		},
 		MessageType: []*descriptorpb.DescriptorProto{{Name: proto.String("Config")}},
 	}
@@ -68,7 +68,7 @@ func run() error {
 		return fmt.Errorf("protoc-gen-go: %s", resp.GetError())
 	}
 	for _, f := range resp.File {
-		out := strings.TrimPrefix(f.GetName(), "github.com/W1nCwC/W1nCray/")
+		out := strings.TrimPrefix(f.GetName(), "github.com/W1nCwC/XrayW/")
 		if err := os.MkdirAll(filepath.Dir(out), 0o755); err != nil {
 			return err
 		}

@@ -20,12 +20,12 @@ import (
 	// Register every Xray protocol, transport and app.
 	_ "github.com/xtls/xray-core/main/distro/all"
 
-	"github.com/W1nCwC/W1nCray/app/dispatcher"
-	"github.com/W1nCwC/W1nCray/common/limiter"
+	"github.com/W1nCwC/XrayW/app/dispatcher"
+	"github.com/W1nCwC/XrayW/common/limiter"
 )
 
 // BlockTag is the tag of the blackhole outbound used by block rules.
-const BlockTag = "w1ncray-block"
+const BlockTag = "xrayw-block"
 
 // upstreamDispatcherType is the TypedMessage type of Xray's dispatcher config,
 // which conf.Config.Build always puts into the App list.
@@ -104,7 +104,7 @@ func New(opts Options) (*Core, error) {
 	d, ok := inst.GetFeature(routing.DispatcherType()).(*dispatcher.Dispatcher)
 	if !ok {
 		inst.Close()
-		return nil, fmt.Errorf("w1ncray dispatcher not installed")
+		return nil, fmt.Errorf("xrayw dispatcher not installed")
 	}
 	l := limiter.New()
 	d.SetLimiter(l)

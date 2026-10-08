@@ -11,9 +11,9 @@ import (
 	"github.com/fsnotify/fsnotify"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/W1nCwC/W1nCray/common/cert"
-	"github.com/W1nCwC/W1nCray/core"
-	"github.com/W1nCwC/W1nCray/node"
+	"github.com/W1nCwC/XrayW/common/cert"
+	"github.com/W1nCwC/XrayW/core"
+	"github.com/W1nCwC/XrayW/node"
 )
 
 // Panel owns the Xray instance and the node controllers.
@@ -112,7 +112,7 @@ func (p *Panel) start() error {
 		}
 	}
 	p.core, p.nodes, p.running = cr, nodes, true
-	log.Infof("W1nCray started with %d node(s)", len(nodes))
+	log.Infof("XrayW started with %d node(s)", len(nodes))
 	return nil
 }
 

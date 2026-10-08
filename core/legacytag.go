@@ -11,7 +11,7 @@ import (
 
 // XrayR named its inbounds "<NodeType>_<ListenIP>_<Port>", e.g.
 // "V2ray_0.0.0.0_65534", and route.json files written for it match on those
-// names. W1nCray names inbounds after the node ("node173@panel.example"), so
+// names. XrayW names inbounds after the node ("node173@panel.example"), so
 // rules carried over from XrayR would silently stop matching. Legacy tags are
 // therefore mapped to the node listening on the same port (a port can belong
 // to one inbound only, and the mapping follows port changes made in the panel).

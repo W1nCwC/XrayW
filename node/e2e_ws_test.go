@@ -11,7 +11,7 @@ import (
 
 	"github.com/gorilla/websocket"
 
-	"github.com/W1nCwC/W1nCray/api/xboard"
+	"github.com/W1nCwC/XrayW/api/xboard"
 )
 
 // fakeWSPanel adds Xboard's handshake and node WebSocket (NodeWorker.php) to
