@@ -1,5 +1,5 @@
 #!/bin/sh
-# W1nCray installer and manager.
+# XrayW installer and manager.
 #
 # POSIX sh: runs under dash (Debian/Ubuntu), busybox ash (Alpine, OpenWRT) and
 # bash. Service backends: systemd, OpenRC (Alpine), procd (OpenWRT).
@@ -7,24 +7,24 @@
 #   sh install.sh install [--lite|--full] [--prefix DIR] [--with-geo]
 #                         [--binary FILE | --url URL | --version vX.Y.Z]
 #
-# After installation the same script is the `W1nCray` command: run it without
-# arguments for a menu, or use the shortcuts (see `W1nCray help`). XrayR files
-# are never modified; XrayR keeps running until `W1nCray switch`.
+# After installation the same script is the `XrayW` command: run it without
+# arguments for a menu, or use the shortcuts (see `XrayW help`). XrayR files
+# are never modified; XrayR keeps running until `XrayW switch`.
 
 set -eu
 
-REPO="${W1NCRAY_REPO:-W1nCwC/W1nCray}"
-ROOT="${W1NCRAY_ROOT:-}"
-CONF_DIR="$ROOT/etc/W1nCray"
+REPO="${XRAYW_REPO:-W1nCwC/XrayW}"
+ROOT="${XRAYW_ROOT:-}"
+CONF_DIR="$ROOT/etc/XrayW"
 CONF="$CONF_DIR/config.yml"
 ENVFILE="$CONF_DIR/install.env"
 XRAYR_DIR="${XRAYR_DIR:-$ROOT/etc/XrayR}"
 XRAYR_UNIT="XrayR"
 GEO_BASE="https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download"
-DEFAULT_PREFIX="$ROOT/usr/local/W1nCray"
+DEFAULT_PREFIX="$ROOT/usr/local/XrayW"
 # Seconds to watch a service after start / switch (tests shorten them).
-WAIT_START="${W1NCRAY_WAIT:-2}"
-WAIT_SWITCH="${W1NCRAY_WAIT:-5}"
+WAIT_START="${XRAYW_WAIT:-2}"
+WAIT_SWITCH="${XRAYW_WAIT:-5}"
 # Size needed to download, unpack and replace (KiB): gzip + binary + old binary.
 NEED_KB_LITE=90000
 NEED_KB_FULL=170000
@@ -80,11 +80,11 @@ load_env() {
 		# shellcheck disable=SC1090
 		. "$ENVFILE"
 	fi
-	BIN="$BIN_DIR/W1nCray"
+	BIN="$BIN_DIR/XrayW"
 	if is_openwrt; then
-		MGR="$ROOT/usr/bin/W1nCray"
+		MGR="$ROOT/usr/bin/XrayW"
 	else
-		MGR="$ROOT/usr/local/bin/W1nCray"
+		MGR="$ROOT/usr/local/bin/XrayW"
 	fi
 	BACKEND="$(detect_backend)"
 }
@@ -98,8 +98,8 @@ save_env() {
 }
 
 detect_backend() {
-	if [ -n "${W1NCRAY_BACKEND:-}" ]; then
-		echo "$W1NCRAY_BACKEND"
+	if [ -n "${XRAYW_BACKEND:-}" ]; then
+		echo "$XRAYW_BACKEND"
 	elif [ -d "$ROOT/run/systemd/system" ]; then
 		echo systemd
 	elif is_openwrt || [ -x "$ROOT/sbin/procd" ]; then
@@ -136,8 +136,8 @@ elf_endian() {
 }
 
 elf_probe_file() {
-	if [ -n "${W1NCRAY_ELF_PROBE:-}" ]; then
-		echo "$W1NCRAY_ELF_PROBE"
+	if [ -n "${XRAYW_ELF_PROBE:-}" ]; then
+		echo "$XRAYW_ELF_PROBE"
 		return 0
 	fi
 	for _f in "$ROOT/bin/busybox" "$ROOT/bin/sh" "$ROOT/bin/ls"; do
@@ -163,7 +163,7 @@ mips_arch() { # $1 = base name (mips|mips64)
 }
 
 arm_variant() {
-	_feat="$(grep -m1 -i '^Features' "${W1NCRAY_CPUINFO:-/proc/cpuinfo}" 2>/dev/null || true)"
+	_feat="$(grep -m1 -i '^Features' "${XRAYW_CPUINFO:-/proc/cpuinfo}" 2>/dev/null || true)"
 	case " $_feat " in
 	*" vfpv3 "* | *" vfpv3d16 "* | *" vfpv4 "*) echo armv7 ;;
 	*" vfp "*) echo armv6 ;;
@@ -173,7 +173,7 @@ arm_variant() {
 
 # detect_arch prints the release architecture name (docs/PLAN-v5-v0.3.0.md).
 detect_arch() {
-	_m="${W1NCRAY_UNAME_M:-$(uname -m)}"
+	_m="${XRAYW_UNAME_M:-$(uname -m)}"
 	case "$_m" in
 	x86_64 | amd64) echo amd64 ;;
 	i386 | i486 | i586 | i686) echo 386 ;;
@@ -208,9 +208,9 @@ default_flavor() {
 
 asset_name() { # arch flavor -> name of the .gz asset
 	if [ "$2" = lite ]; then
-		echo "W1nCray-linux-$1-lite.gz"
+		echo "XrayW-linux-$1-lite.gz"
 	else
-		echo "W1nCray-linux-$1.gz"
+		echo "XrayW-linux-$1.gz"
 	fi
 }
 
@@ -282,7 +282,7 @@ free_kb() { # directory -> free KiB of its filesystem
 }
 
 check_space() { # dir flavor
-	if [ -n "${W1NCRAY_SKIP_SPACE_CHECK:-}" ]; then
+	if [ -n "${XRAYW_SKIP_SPACE_CHECK:-}" ]; then
 		return 0
 	fi
 	_need="$NEED_KB_FULL"
@@ -292,7 +292,7 @@ check_space() { # dir flavor
 	if [ "$_free" -lt "$_need" ]; then
 		red "$1 所在分区空间不足：可用 $((_free / 1024)) MB，需要约 $((_need / 1024)) MB（下载 + 解压 + 替换）。"
 		if is_openwrt; then
-			red "路由器内置闪存通常装不下：请挂载外部存储（extroot 或 USB/SD），再用 --prefix /mnt/xxx/W1nCray 安装，并优先使用精简版（--lite）。"
+			red "路由器内置闪存通常装不下：请挂载外部存储（extroot 或 USB/SD），再用 --prefix /mnt/xxx/XrayW 安装，并优先使用精简版（--lite）。"
 		else
 			red "请释放空间，或用 --prefix 指定空间更大的目录。"
 		fi
@@ -309,10 +309,10 @@ fetch_binary() {
 	_fl="$2"
 	mkdir -p "$BIN_DIR"
 	check_space "$BIN_DIR" "$_fl"
-	TMPD="$BIN_DIR/.dl.$$"
+	TMPD="$BIN_DIR/.xrayw-dl.$$"
 	mkdir -p "$TMPD"
 	trap 'rm -rf "$TMPD"' EXIT INT TERM
-	NEWBIN="$TMPD/W1nCray"
+	NEWBIN="$TMPD/XrayW"
 	case "$_src" in
 	file:*)
 		_f="${_src#file:}"
@@ -339,7 +339,7 @@ fetch_binary() {
 		_ok=0
 		for _a in $(arch_fallbacks "$_arch"); do
 			_asset="$(asset_name "$_a" "$_fl")"
-			yellow "下载 W1nCray $_tag ($_a, $_fl) ..."
+			yellow "下载 XrayW $_tag ($_a, $_fl) ..."
 			download "https://github.com/$REPO/releases/download/$_tag/$_asset" "$TMPD/dl.gz" || die "下载失败: $REPO $_tag $_asset"
 			verify_sha256 "$TMPD/dl.gz" "$_asset" "$_tag"
 			gunzip -c "$TMPD/dl.gz" >"$NEWBIN" || die "解压失败: $_asset"
@@ -360,7 +360,7 @@ fetch_binary() {
 
 # ---- service backends ------------------------------------------------------
 # Every backend defines be_<name>_<op>; `svc OP ARGS` dispatches. Units are
-# named by the argument (W1nCray, XrayR).
+# named by the argument (XrayW, XrayR).
 
 svc() {
 	_op="$1"
@@ -371,9 +371,9 @@ svc() {
 # systemd ---------------------------------------------------------------------
 
 be_systemd_install() {
-	sed -e "s#@BIN@#$BIN#g" -e "s#@CONF@#$CONF#g" -e "s#@CONF_DIR@#$CONF_DIR#g" >"$ROOT/etc/systemd/system/W1nCray.service" <<'EOF'
+	sed -e "s#@BIN@#$BIN#g" -e "s#@CONF@#$CONF#g" -e "s#@CONF_DIR@#$CONF_DIR#g" >"$ROOT/etc/systemd/system/XrayW.service" <<'EOF'
 [Unit]
-Description=W1nCray Xboard node backend
+Description=XrayW Xboard node backend
 After=network-online.target nss-lookup.target
 Wants=network-online.target
 
@@ -393,7 +393,7 @@ EOF
 	systemctl daemon-reload
 }
 be_systemd_remove() {
-	rm -f "$ROOT/etc/systemd/system/W1nCray.service"
+	rm -f "$ROOT/etc/systemd/system/XrayW.service"
 	systemctl daemon-reload
 }
 be_systemd_exists() { systemctl list-unit-files "$1.service" --no-legend 2>/dev/null | grep -q "^$1.service"; }
@@ -412,12 +412,12 @@ be_systemd_levels() { :; }
 
 be_openrc_install() {
 	mkdir -p "$ROOT/etc/init.d"
-	sed -e "s#@BIN@#$BIN#g" -e "s#@CONF@#$CONF#g" -e "s#@CONF_DIR@#$CONF_DIR#g" >"$ROOT/etc/init.d/W1nCray" <<'EOF'
+	sed -e "s#@BIN@#$BIN#g" -e "s#@CONF@#$CONF#g" -e "s#@CONF_DIR@#$CONF_DIR#g" >"$ROOT/etc/init.d/XrayW" <<'EOF'
 #!/sbin/openrc-run
-# W1nCray Xboard node backend (OpenRC)
+# XrayW Xboard node backend (OpenRC)
 
-name="W1nCray"
-description="W1nCray Xboard node backend"
+name="XrayW"
+description="XrayW Xboard node backend"
 
 supervisor="supervise-daemon"
 command="@BIN@"
@@ -430,8 +430,8 @@ respawn_max=0
 
 rc_ulimit="-n 1048576"
 
-output_log="/var/log/W1nCray.log"
-error_log="/var/log/W1nCray.log"
+output_log="/var/log/XrayW.log"
+error_log="/var/log/XrayW.log"
 
 supervise_daemon_args="--env XRAY_LOCATION_ASSET=@CONF_DIR@"
 
@@ -449,9 +449,9 @@ start_pre() {
 	return 0
 }
 EOF
-	chmod 755 "$ROOT/etc/init.d/W1nCray"
+	chmod 755 "$ROOT/etc/init.d/XrayW"
 }
-be_openrc_remove() { rm -f "$ROOT/etc/init.d/W1nCray"; }
+be_openrc_remove() { rm -f "$ROOT/etc/init.d/XrayW"; }
 be_openrc_exists() { [ -x "$ROOT/etc/init.d/$1" ]; }
 be_openrc_active() { rc-service "$1" status >/dev/null 2>&1; }
 # Runlevels a service is enabled in (XrayR community scripts used a custom one).
@@ -490,9 +490,9 @@ be_procd_install() {
 		;;
 	esac
 	mkdir -p "$ROOT/etc/init.d"
-	sed -e "s#@BIN@#$BIN#g" -e "s#@CONF@#$CONF#g" -e "s#@ENV@#$_env#g" >"$ROOT/etc/init.d/W1nCray" <<'EOF'
+	sed -e "s#@BIN@#$BIN#g" -e "s#@CONF@#$CONF#g" -e "s#@ENV@#$_env#g" >"$ROOT/etc/init.d/XrayW" <<'EOF'
 #!/bin/sh /etc/rc.common
-# W1nCray Xboard node backend (procd)
+# XrayW Xboard node backend (procd)
 
 USE_PROCD=1
 START=99
@@ -511,9 +511,9 @@ start_service() {
 	procd_close_instance
 }
 EOF
-	chmod 755 "$ROOT/etc/init.d/W1nCray"
+	chmod 755 "$ROOT/etc/init.d/XrayW"
 }
-be_procd_remove() { rm -f "$ROOT/etc/init.d/W1nCray"; }
+be_procd_remove() { rm -f "$ROOT/etc/init.d/XrayW"; }
 be_procd_exists() { [ -x "$ROOT/etc/init.d/$1" ]; }
 # `status` reports "running" for a dead instance on OpenWRT <= 23.05; use `running`.
 be_procd_active() {
@@ -552,7 +552,7 @@ be_none_levels() { :; }
 # daemon_pids prints the PIDs of the running program. busybox pidof also matches
 # scripts by name, which would include this manager script itself.
 daemon_pids() {
-	_all="$(pidof W1nCray 2>/dev/null || true)"
+	_all="$(pidof XrayW 2>/dev/null || true)"
 	_out=""
 	for _p in $_all; do
 		_exe="$(readlink "/proc/$_p/exe" 2>/dev/null || true)"
@@ -581,7 +581,7 @@ xrayr_present() {
 # ---- commands --------------------------------------------------------------
 
 require_bin() {
-	[ -x "$BIN" ] || die "W1nCray 尚未安装（找不到 $BIN）。先执行: sh install.sh install"
+	[ -x "$BIN" ] || die "XrayW 尚未安装（找不到 $BIN）。先执行: sh install.sh install"
 }
 
 run_check() {
@@ -589,7 +589,7 @@ run_check() {
 	if "$BIN" check -c "$CONF" --online; then
 		return 0
 	fi
-	red "配置检查未通过，请修改 $CONF 后执行: W1nCray check"
+	red "配置检查未通过，请修改 $CONF 后执行: XrayW check"
 	return 1
 }
 
@@ -604,13 +604,13 @@ backup_conf() {
 # self_copy installs this script as the manager command and next to the binary.
 self_copy() {
 	_self=""
-	if [ -f "${W1NCRAY_SELF:-$0}" ]; then
-		_self="${W1NCRAY_SELF:-$0}"
+	if [ -f "${XRAYW_SELF:-$0}" ]; then
+		_self="${XRAYW_SELF:-$0}"
 	fi
 	if [ -z "$_self" ]; then
 		_self="$BIN_DIR/install.sh.dl"
 		download "https://raw.githubusercontent.com/$REPO/main/install.sh" "$_self" || {
-			yellow "未能保存安装脚本副本，管理命令 W1nCray 不可用；请重新下载 install.sh 执行"
+			yellow "未能保存安装脚本副本，管理命令 XrayW 不可用；请重新下载 install.sh 执行"
 			rm -f "$_self"
 			return 0
 		}
@@ -648,7 +648,7 @@ keep_on_sysupgrade() {
 	is_openwrt || return 0
 	_sc="$ROOT/etc/sysupgrade.conf"
 	touch "$_sc"
-	for _p in "/etc/W1nCray/" "/etc/init.d/W1nCray"; do
+	for _p in "/etc/XrayW/" "/etc/init.d/XrayW"; do
 		grep -qxF "$_p" "$_sc" 2>/dev/null || printf '%s\n' "$_p" >>"$_sc"
 	done
 }
@@ -660,9 +660,9 @@ drop_sysupgrade_entries() { # $1 = 1 to drop the config directory entry too
 	_sc="$ROOT/etc/sysupgrade.conf"
 	[ -f "$_sc" ] || return 0
 	_tmp="$(mktemp)"
-	grep -vxF "/etc/init.d/W1nCray" "$_sc" >"$_tmp" || true
+	grep -vxF "/etc/init.d/XrayW" "$_sc" >"$_tmp" || true
 	if [ "$1" -eq 1 ]; then
-		grep -vxF "/etc/W1nCray/" "$_tmp" >"$_tmp.2" || true
+		grep -vxF "/etc/XrayW/" "$_tmp" >"$_tmp.2" || true
 		mv "$_tmp.2" "$_tmp"
 	fi
 	cat "$_tmp" >"$_sc"
@@ -723,14 +723,14 @@ cmd_install() {
 	need_root
 
 	[ -n "$_prefix" ] && BIN_DIR="$_prefix"
-	BIN="$BIN_DIR/W1nCray"
+	BIN="$BIN_DIR/XrayW"
 	# An upgrade keeps the flavor that was installed unless told otherwise.
 	[ -z "$_flavor" ] && _flavor="$FLAVOR"
 	[ -z "$_flavor" ] && _flavor="$(default_flavor)"
 	FLAVOR="$_flavor"
 
 	_was_active=0
-	if [ -x "$BIN" ] && svc active W1nCray 2>/dev/null; then
+	if [ -x "$BIN" ] && svc active XrayW 2>/dev/null; then
 		_was_active=1
 	fi
 
@@ -750,10 +750,10 @@ cmd_install() {
 			"$BIN" migrate --from "$XRAYR_DIR" --to "$CONF_DIR"
 		else
 			"$BIN" init --dir "$CONF_DIR"
-			yellow "已生成默认配置，请编辑 $CONF 填写 ApiHost / ApiKey / NodeID（W1nCray config）"
+			yellow "已生成默认配置，请编辑 $CONF 填写 ApiHost / ApiKey / NodeID（XrayW config）"
 		fi
 	else
-		yellow "保留现有配置 $CONF（重新迁移请执行: W1nCray migrate）"
+		yellow "保留现有配置 $CONF（重新迁移请执行: XrayW migrate）"
 	fi
 
 	if [ "$_geo" = yes ] || { [ "$_geo" != no ] && ! is_openwrt; }; then
@@ -764,7 +764,7 @@ cmd_install() {
 
 	if [ "$BACKEND" = none ]; then
 		yellow "没有检测到可用的服务管理器（systemd / OpenRC / procd），程序与配置已就位但未注册为服务。"
-		yellow "可手动前台运行: $BIN -c $CONF   （或 W1nCray run）"
+		yellow "可手动前台运行: $BIN -c $CONF   （或 XrayW run）"
 		return 0
 	fi
 	svc install
@@ -774,25 +774,25 @@ cmd_install() {
 	fi
 
 	if [ "$_was_active" -eq 1 ]; then
-		svc restart W1nCray
-		green "W1nCray 已重启（升级完成）"
+		svc restart XrayW
+		green "XrayW 已重启（升级完成）"
 		return 0
 	fi
 	_failed=0
 	run_check || _failed=1
 	if xrayr_present && { svc active "$XRAYR_UNIT" || svc enabled "$XRAYR_UNIT"; }; then
-		yellow "XrayR 仍在运行/开机自启，为避免端口冲突，W1nCray 暂未启动。"
-		yellow "确认无误后执行: W1nCray switch   （失败会自动回滚到 XrayR）"
+		yellow "XrayR 仍在运行/开机自启，为避免端口冲突，XrayW 暂未启动。"
+		yellow "确认无误后执行: XrayW switch   （失败会自动回滚到 XrayR）"
 	elif [ "$_failed" -eq 0 ]; then
-		svc enable W1nCray
-		svc start W1nCray
-		green "W1nCray 已启动并设为开机自启。管理命令: W1nCray（菜单）、W1nCray status、W1nCray log"
+		svc enable XrayW
+		svc start XrayW
+		green "XrayW 已启动并设为开机自启。管理命令: XrayW（菜单）、XrayW status、XrayW log"
 	fi
 }
 
 cmd_update() {
 	require_bin
-	# "W1nCray update v1.2.3" is shorthand for "--version v1.2.3".
+	# "XrayW update v1.2.3" is shorthand for "--version v1.2.3".
 	case "${1:-}" in
 	v[0-9]*)
 		_v="$1"
@@ -819,8 +819,8 @@ cmd_migrate() {
 	backup_conf
 	"$BIN" migrate --from "$XRAYR_DIR" --to "$CONF_DIR" --force
 	run_check || true
-	if svc active W1nCray; then
-		yellow "W1nCray 正在运行，配置文件变更会自动重载"
+	if svc active XrayW; then
+		yellow "XrayW 正在运行，配置文件变更会自动重载"
 	fi
 }
 
@@ -833,21 +833,21 @@ cmd_switch() {
 	need_root
 	require_bin
 	run_check || die "检查未通过，未做切换"
-	ask "将停止并禁用 XrayR、启用 W1nCray，确认？" || die "已取消"
+	ask "将停止并禁用 XrayR、启用 XrayW，确认？" || die "已取消"
 	if svc exists "$XRAYR_UNIT"; then
 		# Remember where XrayR was enabled (OpenRC runlevel) for rollback.
 		svc levels "$XRAYR_UNIT" >"$CONF_DIR/xrayr.levels" 2>/dev/null || true
 		svc stop "$XRAYR_UNIT" || true
 		svc disable "$XRAYR_UNIT" || true
 	fi
-	svc enable W1nCray
-	svc start W1nCray
-	if stable_running W1nCray "$WAIT_SWITCH"; then
-		green "切换完成，W1nCray 运行中。回滚: W1nCray rollback"
-		svc log W1nCray 20 || true
+	svc enable XrayW
+	svc start XrayW
+	if stable_running XrayW "$WAIT_SWITCH"; then
+		green "切换完成，XrayW 运行中。回滚: XrayW rollback"
+		svc log XrayW 20 || true
 	else
-		red "W1nCray 启动失败，自动回滚到 XrayR"
-		svc log W1nCray 50 || true
+		red "XrayW 启动失败，自动回滚到 XrayR"
+		svc log XrayW 50 || true
 		cmd_rollback
 		exit 1
 	fi
@@ -855,8 +855,8 @@ cmd_switch() {
 
 cmd_rollback() {
 	need_root
-	svc stop W1nCray >/dev/null 2>&1 || true
-	svc disable W1nCray >/dev/null 2>&1 || true
+	svc stop XrayW >/dev/null 2>&1 || true
+	svc disable XrayW >/dev/null 2>&1 || true
 	if svc exists "$XRAYR_UNIT"; then
 		_lv="default"
 		if [ -s "$CONF_DIR/xrayr.levels" ]; then
@@ -867,43 +867,43 @@ cmd_rollback() {
 		sleep 2
 		if svc active "$XRAYR_UNIT"; then green "已恢复 XrayR"; else red "XrayR 未能启动，请查看它的日志"; fi
 	else
-		yellow "未找到 XrayR 服务，仅停止了 W1nCray"
+		yellow "未找到 XrayR 服务，仅停止了 XrayW"
 	fi
 }
 
 cmd_start() {
 	need_root
 	require_bin
-	svc start W1nCray
-	stable_running W1nCray "$WAIT_START" && green "已启动" || red "启动后未能保持运行，请查看日志: W1nCray log"
+	svc start XrayW
+	stable_running XrayW "$WAIT_START" && green "已启动" || red "启动后未能保持运行，请查看日志: XrayW log"
 }
 cmd_stop() {
 	need_root
-	svc stop W1nCray
+	svc stop XrayW
 	green "已停止"
 }
 cmd_restart() {
 	need_root
 	require_bin
-	svc restart W1nCray
-	stable_running W1nCray "$WAIT_START" && green "已重启" || red "重启后未能保持运行，请查看日志: W1nCray log"
+	svc restart XrayW
+	stable_running XrayW "$WAIT_START" && green "已重启" || red "重启后未能保持运行，请查看日志: XrayW log"
 }
 cmd_enable() {
 	need_root
-	svc enable W1nCray
+	svc enable XrayW
 	green "已设为开机自启"
 }
 cmd_disable() {
 	need_root
-	svc disable W1nCray
+	svc disable XrayW
 	green "已取消开机自启"
 }
 
 cmd_log() {
 	if [ "${1:-}" = "-n" ]; then
-		svc log W1nCray "${2:-100}"
+		svc log XrayW "${2:-100}"
 	else
-		svc follow W1nCray
+		svc follow XrayW
 	fi
 }
 
@@ -914,14 +914,14 @@ cmd_status() {
 		printf '版本:       未安装（%s）\n' "$BIN"
 	fi
 	printf '服务管理器: %s\n' "$BACKEND"
-	if svc exists W1nCray; then
-		if svc active W1nCray; then
+	if svc exists XrayW; then
+		if svc active XrayW; then
 			_pid="$(daemon_pids)"
 			printf '运行状态:   %s运行中%s（PID %s）\n' "$C_GREEN" "$C_OFF" "${_pid:-?}"
 		else
 			printf '运行状态:   %s未运行%s\n' "$C_RED" "$C_OFF"
 		fi
-		if svc enabled W1nCray; then printf '开机自启:   是\n'; else printf '开机自启:   否\n'; fi
+		if svc enabled XrayW; then printf '开机自启:   是\n'; else printf '开机自启:   否\n'; fi
 	else
 		printf '运行状态:   服务未安装\n'
 	fi
@@ -931,14 +931,14 @@ cmd_status() {
 	fi
 	if xrayr_present; then
 		if svc active "$XRAYR_UNIT"; then
-			printf 'XrayR:      %s仍在运行%s（可执行 W1nCray switch 切换）\n' "$C_YELLOW" "$C_OFF"
+			printf 'XrayR:      %s仍在运行%s（可执行 XrayW switch 切换）\n' "$C_YELLOW" "$C_OFF"
 		else
 			printf 'XrayR:      已安装，未运行\n'
 		fi
 	fi
-	if svc exists W1nCray; then
+	if svc exists XrayW; then
 		echo "--- 最近的 WebSocket 与错误日志"
-		svc log W1nCray 300 2>/dev/null | grep -E 'websocket|level=(error|warning)' | tail -n 8 || true
+		svc log XrayW 300 2>/dev/null | grep -E 'websocket|level=(error|warning)' | tail -n 8 || true
 	fi
 }
 
@@ -961,19 +961,19 @@ cmd_uninstall() {
 	done
 	need_root
 	if [ "$_purge" -eq 1 ]; then
-		ask "将卸载 W1nCray 并删除配置目录 $CONF_DIR，确认？" || die "已取消"
+		ask "将卸载 XrayW 并删除配置目录 $CONF_DIR，确认？" || die "已取消"
 	else
-		ask "将卸载 W1nCray（保留配置目录 $CONF_DIR），确认？" || die "已取消"
+		ask "将卸载 XrayW（保留配置目录 $CONF_DIR），确认？" || die "已取消"
 	fi
-	svc stop W1nCray >/dev/null 2>&1 || true
-	svc disable W1nCray >/dev/null 2>&1 || true
-	svc remove W1nCray || true
+	svc stop XrayW >/dev/null 2>&1 || true
+	svc disable XrayW >/dev/null 2>&1 || true
+	svc remove XrayW || true
 	rm -f "$BIN" "$BIN_DIR/install.sh" "$MGR"
 	rmdir "$BIN_DIR" 2>/dev/null || true
 	drop_sysupgrade_entries "$_purge"
 	if [ "$_purge" -eq 1 ]; then
 		case "$CONF_DIR" in
-		*/etc/W1nCray) rm -rf "$CONF_DIR" ;;
+		*/etc/XrayW) rm -rf "$CONF_DIR" ;;
 		*) die "拒绝删除异常的配置目录路径: $CONF_DIR" ;;
 		esac
 		green "已卸载并删除 $CONF_DIR"
@@ -989,22 +989,22 @@ cmd_run() {
 
 usage() {
 	cat <<'EOF'
-W1nCray 管理命令
+XrayW 管理命令
 
-  W1nCray                    打开管理菜单
-  W1nCray start|stop|restart 启动 / 停止 / 重启服务
-  W1nCray status             版本、运行状态、开机自启、WebSocket 与最近错误
-  W1nCray log [-n 行数]      实时查看日志（加 -n 只看最近若干行）
-  W1nCray check              检查配置并向面板验证每个节点
-  W1nCray config             编辑配置文件，保存后可立即检查
-  W1nCray enable|disable     开机自启 开 / 关
-  W1nCray update [版本号] [--lite|--full]  更新程序（默认保持当前的版本类型）
-  W1nCray migrate            重新迁移 XrayR 配置（先备份）
-  W1nCray switch [-y]        停用 XrayR、启用 W1nCray（失败自动回滚）
-  W1nCray rollback           停用 W1nCray、恢复 XrayR
-  W1nCray uninstall [--purge] [-y]  卸载（--purge 同时删除配置）
-  W1nCray run                前台运行（已有实例在运行时会被拒绝）
-  W1nCray version | x25519 | init ...  程序本体的命令
+  XrayW                    打开管理菜单
+  XrayW start|stop|restart 启动 / 停止 / 重启服务
+  XrayW status             版本、运行状态、开机自启、WebSocket 与最近错误
+  XrayW log [-n 行数]      实时查看日志（加 -n 只看最近若干行）
+  XrayW check              检查配置并向面板验证每个节点
+  XrayW config             编辑配置文件，保存后可立即检查
+  XrayW enable|disable     开机自启 开 / 关
+  XrayW update [版本号] [--lite|--full]  更新程序（默认保持当前的版本类型）
+  XrayW migrate            重新迁移 XrayR 配置（先备份）
+  XrayW switch [-y]        停用 XrayR、启用 XrayW（失败自动回滚）
+  XrayW rollback           停用 XrayW、恢复 XrayR
+  XrayW uninstall [--purge] [-y]  卸载（--purge 同时删除配置）
+  XrayW run                前台运行（已有实例在运行时会被拒绝）
+  XrayW version | x25519 | init ...  程序本体的命令
 
 首次安装:
   sh install.sh install [--lite|--full] [--prefix DIR] [--with-geo]
@@ -1015,14 +1015,14 @@ EOF
 menu() {
 	while :; do
 		echo
-		echo "================ W1nCray 管理菜单 ================"
+		echo "================ XrayW 管理菜单 ================"
 		if [ -x "$BIN" ]; then
 			printf '  版本: %s\n' "$("$BIN" version 2>/dev/null | head -n1)"
 		fi
 		_state="未安装服务"
-		if svc exists W1nCray; then
-			if svc active W1nCray; then _state="运行中"; else _state="未运行"; fi
-			if svc enabled W1nCray; then _state="$_state / 开机自启"; else _state="$_state / 未自启"; fi
+		if svc exists XrayW; then
+			if svc active XrayW; then _state="运行中"; else _state="未运行"; fi
+			if svc enabled XrayW; then _state="$_state / 开机自启"; else _state="$_state / 未自启"; fi
 		fi
 		printf '  状态: %s    服务管理器: %s\n' "$_state" "$BACKEND"
 		cat <<'EOF'
@@ -1030,7 +1030,7 @@ menu() {
    1. 启动        2. 停止        3. 重启
    4. 查看状态    5. 实时日志    6. 检查配置
    7. 编辑配置    8. 开机自启开关    9. 更新程序
-  10. 从 XrayR 迁移配置   11. 切换到 W1nCray   12. 回滚到 XrayR
+  10. 从 XrayR 迁移配置   11. 切换到 XrayW   12. 回滚到 XrayR
   13. 卸载
    0. 退出
 ==================================================
@@ -1046,7 +1046,7 @@ EOF
 		6) cmd_check || true ;;
 		7) cmd_config ;;
 		8)
-			if svc enabled W1nCray; then cmd_disable; else cmd_enable; fi
+			if svc enabled XrayW; then cmd_disable; else cmd_enable; fi
 			;;
 		9) cmd_update ;;
 		10) cmd_migrate ;;
@@ -1059,9 +1059,9 @@ EOF
 	done
 }
 
-# dispatch COMMAND [ARGS...]. Run as the `W1nCray` command, anything that is
-# not a management command goes to the program itself (W1nCray migrate --from
-# ..., W1nCray x25519, W1nCray -c config.yml); the installer script rejects it.
+# dispatch COMMAND [ARGS...]. Run as the `XrayW` command, anything that is
+# not a management command goes to the program itself (XrayW migrate --from
+# ..., XrayW x25519, XrayW -c config.yml); the installer script rejects it.
 dispatch() {
 	_cmd="${1:-}"
 	[ $# -gt 0 ] && shift
@@ -1110,12 +1110,12 @@ dispatch() {
 main() {
 	ASSUME_YES=0
 	AS_MANAGER=0
-	case "${0##*/}" in W1nCray) AS_MANAGER=1 ;; esac
+	case "${0##*/}" in XrayW) AS_MANAGER=1 ;; esac
 	load_env
 	dispatch "$@"
 }
 
 # Sourced by the tests (tests/install_test.sh) without running main.
-if [ -z "${W1NCRAY_LIB:-}" ]; then
+if [ -z "${XRAYW_LIB:-}" ]; then
 	main "$@"
 fi
