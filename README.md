@@ -1,5 +1,9 @@
 # W1nCray
 
+> **XrayW**：本仓库收录 W1nCray **v0.1.0 – v0.3.0**，即基于官方 Xray-core 重写、兼容 Xboard（UniProxy 与 WebSocket）的 XrayR 替代版本。
+> 从 v0.4.0 起项目演进为多内核 agent，不再以兼容 Xboard 为目标，后续版本在 [W1nCray](https://github.com/W1nCwC/W1nCray) 发布。
+> 本仓库的发布包与原 W1nCray 发布逐字节相同；其中 `install.sh` 的下载地址仍指向 W1nCray 仓库的同版本发布（保持可用）。
+
 基于**官方稳定版 Xray-core（v26.3.27）**重构的 XrayR，专为 [Xboard](https://github.com/cedar2025/Xboard) 设计的节点后端。
 
 - 内核：官方 `github.com/xtls/xray-core v1.260327.0`（= v26.3.27，截至 2026-10 最新的非预发布版本），不使用任何魔改分支。
