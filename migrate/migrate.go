@@ -146,8 +146,12 @@ func Run(opts Options) (*Report, error) {
 		planned: make(map[string]string),
 		origin:  make(map[string]string),
 	}
-	if _, err := os.Stat(m.report.Config); err == nil && !opts.Force {
-		return nil, fmt.Errorf("%s already exists (use --force to overwrite)", m.report.Config)
+	// A dry run writes nothing, so an existing target must not block it: it is
+	// the normal way to inspect an already installed system.
+	if !opts.DryRun {
+		if _, err := os.Stat(m.report.Config); err == nil && !opts.Force {
+			return nil, fmt.Errorf("%s already exists (use --force to overwrite)", m.report.Config)
+		}
 	}
 
 	var doc yaml.Node
@@ -425,6 +429,11 @@ func (m *migration) planKnownFiles() {
 			}
 		}
 		if !found {
+			// The target may already have the file (for example the installer
+			// downloaded it); it is kept, so do not warn that it is missing.
+			if _, err := os.Stat(filepath.Join(m.toDir, f)); err == nil {
+				continue
+			}
 			m.report.warn("未找到 %s；面板路由使用 geosite:/geoip: 时需要它（安装脚本会自动下载）", f)
 		}
 	}

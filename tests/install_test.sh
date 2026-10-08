@@ -91,6 +91,14 @@ elf_fixture() { # path endian(l|b)
 	fi
 }
 
+# next_fake_pid prints an increasing fake PID (the mock process table).
+next_fake_pid() {
+	_n="$(cat "$XRAYW_ROOT/state/pid.next" 2>/dev/null || echo 1000)"
+	_n=$((_n + 1))
+	printf '%s\n' "$_n" >"$XRAYW_ROOT/state/pid.next"
+	echo "$_n"
+}
+
 # Mock service backend; state lives in $XRAYW_ROOT/state.
 mock_backend() {
 	CALLS="$XRAYW_ROOT/calls.log"
@@ -111,15 +119,31 @@ mock_backend() {
 	be_mock_enabled() { [ -e "$ST/$1.enabled" ]; }
 	be_mock_start() {
 		echo "start $1" >>"$CALLS"
-		[ -e "$ST/$1.failstart" ] || : >"$ST/$1.active"
+		if [ ! -e "$ST/$1.failstart" ]; then
+			: >"$ST/$1.active"
+			next_fake_pid >"$ST/$1.pid"
+		fi
 	}
 	be_mock_stop() {
 		echo "stop $1" >>"$CALLS"
-		rm -f "$ST/$1.active"
+		rm -f "$ST/$1.active" "$ST/$1.pid"
 	}
 	be_mock_restart() {
 		echo "restart $1" >>"$CALLS"
 		: >"$ST/$1.active"
+		next_fake_pid >"$ST/$1.pid"
+	}
+	# daemon_pids() looks at pidof and /proc/<pid>/exe; make both report the
+	# fake process so stable_running() sees a real, single PID.
+	pidof() {
+		if [ -f "$ST/$1.pid" ]; then cat "$ST/$1.pid"; fi
+		return 0
+	}
+	readlink() {
+		case "$1" in
+		/proc/*/exe) echo "$BIN" ;;
+		*) command readlink "$@" ;;
+		esac
 	}
 	be_mock_enable() {
 		echo "enable $1 ${2:-}" >>"$CALLS"
@@ -132,6 +156,24 @@ mock_backend() {
 	be_mock_log() { echo "mock log of $1: level=error boom websocket connected"; }
 	be_mock_follow() { echo "follow $1" >>"$CALLS"; }
 	be_mock_levels() { [ -f "$ST/$1.levels" ] && cat "$ST/$1.levels"; return 0; }
+}
+
+# fake_pidof LIST... overrides pidof so daemon_pids() walks the given PID
+# lists, one list per call, repeating the last one. An empty list means "no
+# process yet"; two PIDs model the procd handover window.
+fake_pidof() {
+	_seq="$XRAYW_ROOT/pidseq"
+	_idx="$XRAYW_ROOT/pididx"
+	: >"$_seq"
+	for _e in "$@"; do printf '%s\n' "$_e" >>"$_seq"; done
+	echo 1 >"$_idx"
+	pidof() {
+		_i="$(cat "$XRAYW_ROOT/pididx")"
+		_n="$(wc -l <"$XRAYW_ROOT/pidseq")"
+		if [ "$_i" -gt "$_n" ]; then _i="$_n"; fi
+		sed -n "${_i}p" "$XRAYW_ROOT/pidseq"
+		echo $((_i + 1)) >"$XRAYW_ROOT/pididx"
+	}
 }
 
 # Release downloads: serve fixtures from $XRAYW_ROOT/release for a tag.
@@ -359,8 +401,66 @@ t_install_check_fails() {
 	FAKE_CHECK_RC=1
 	export FAKE_CHECK_RC
 	out="$(cmd_install --binary "$XRAYW_ROOT/fakebin" --no-geo 2>&1)"
+	rc=$?
 	hasnt "failed check -> service not started" "$(cat "$CALLS")" "start XrayW"
 	has "failed check is reported" "$out" "配置检查未通过"
+	has "failed check says the service was not started" "$out" "服务尚未启动"
+	has "failed check explains how to start it" "$out" "XrayW start"
+	has "failed check explains how to enable it" "$out" "XrayW enable"
+	eq "install still exits 0 after a failed check" "$rc" 0
+}
+
+# ---- stable_running (D3) ----------------------------------------------------
+
+t_stable_running_waits_for_pid() {
+	mock_backend
+	: >"$ST/XrayW.active"
+	# systemd: pidof is empty right after the restart, the process shows up later.
+	fake_pidof "" "4321" "4321"
+	check "a PID that appears after the restart counts as stable" stable_running XrayW 2
+}
+
+t_stable_running_pid_handover() {
+	mock_backend
+	: >"$ST/XrayW.active"
+	# procd: the old and the new PID are visible together for a moment.
+	fake_pidof "1111 2222" "1111 2222" "2222" "2222" "2222"
+	check "settling on one PID after the handover counts as stable" stable_running XrayW 2
+}
+
+t_stable_running_crash_loop() {
+	mock_backend
+	: >"$ST/XrayW.active"
+	# The supervisor says "started" but the process keeps changing.
+	fake_pidof "1000" "2000" "3000" "4000"
+	refute "a changing PID (crash loop) is unstable" stable_running XrayW 2
+}
+
+t_stable_running_never_starts() {
+	mock_backend
+	: >"$ST/XrayW.active"
+	fake_pidof "" "" ""
+	refute "a process that never appears times out as unstable" stable_running XrayW 1
+}
+
+t_restart_exit_code() {
+	mock_backend
+	mkdir -p "$BIN_DIR"
+	make_fake_bin "$BIN"
+	: >"$ST/XrayW.exists"
+	: >"$ST/XrayW.active"
+	fake_pidof "" "" ""
+	( cmd_restart ) >"$XRAYW_ROOT/out" 2>&1
+	eq "restart exits non-zero when it does not stay up" "$?" 1
+	has "restart says it did not stay up" "$(cat "$XRAYW_ROOT/out")" "未能保持运行"
+	fake_pidof "" "" ""
+	( cmd_start ) >/dev/null 2>&1
+	eq "start exits non-zero when it does not stay up" "$?" 1
+	fake_pidof "7777" "7777" "7777"
+	( cmd_restart ) >/dev/null 2>&1
+	eq "a healthy restart exits 0" "$?" 0
+	( cmd_start ) >/dev/null 2>&1
+	eq "a healthy start exits 0" "$?" 0
 }
 
 t_install_openwrt() {
@@ -602,6 +702,19 @@ t_uninstall() {
 	refute "--purge removes the config directory" test -d "$CONF_DIR"
 }
 
+t_uninstall_purge_removes_openrc_log() {
+	mock_backend
+	make_fake_bin "$XRAYW_ROOT/fakebin"
+	XRAYW_SELF="$SCRIPT"
+	cmd_install --binary "$XRAYW_ROOT/fakebin" --no-geo >/dev/null 2>&1
+	mkdir -p "$XRAYW_ROOT/var/log"
+	echo "log line" >"$XRAYW_ROOT/var/log/XrayW.log"
+	cmd_uninstall -y >/dev/null 2>&1
+	check "uninstall without --purge keeps the OpenRC log" test -f "$XRAYW_ROOT/var/log/XrayW.log"
+	cmd_uninstall --purge -y >/dev/null 2>&1
+	refute "--purge removes the OpenRC log" test -e "$XRAYW_ROOT/var/log/XrayW.log"
+}
+
 t_uninstall_openwrt_sysupgrade() {
 	mock_backend
 	make_fake_bin "$XRAYW_ROOT/fakebin"
@@ -655,7 +768,10 @@ run() { # name
 for t in t_arch t_endian_dd_and_hexdump t_flavor_and_backend t_latest_tag t_verify t_generated_scripts \
 	t_install_fresh t_install_xrayr_present t_install_check_fails t_install_openwrt \
 	t_install_flavor_prefix_upgrade t_install_from_release t_update_version_shorthand t_space_check t_switch_rollback \
-	t_manager_dispatch t_menu t_uninstall t_uninstall_openwrt_sysupgrade t_uninstall_refuses_odd_paths t_none_backend; do
+	t_stable_running_waits_for_pid t_stable_running_pid_handover t_stable_running_crash_loop \
+	t_stable_running_never_starts t_restart_exit_code \
+	t_manager_dispatch t_menu t_uninstall t_uninstall_purge_removes_openrc_log \
+	t_uninstall_openwrt_sysupgrade t_uninstall_refuses_odd_paths t_none_backend; do
 	run "$t"
 done
 

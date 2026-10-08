@@ -565,13 +565,46 @@ daemon_pids() {
 
 # stable_running UNIT SECONDS: running, and the same process the whole time
 # (supervisors report a crash-looping service as started).
+#
+# A restart is not instantaneous: systemd's pidof is empty for a moment after
+# `restart` returns, and procd briefly reports the old and the new PID at the
+# same time. So wait for exactly one process first (up to SECONDS), then watch
+# it for another SECONDS: still active and still that same PID. A crash-restart
+# loop changes the PID and is still reported as unstable.
 stable_running() {
-	svc active "$1" || return 1
-	_p1="$(daemon_pids)"
-	sleep "$2"
-	svc active "$1" || return 1
-	_p2="$(daemon_pids)"
-	[ "$_p1" = "$_p2" ]
+	_unit="$1"
+	_secs="$2"
+	_base=""
+	_waited=0
+	while :; do
+		_base=""
+		if svc active "$_unit"; then
+			_pids="$(daemon_pids)"
+			case "$_pids" in
+			'' | *' '*) ;;
+			*) _base="$_pids" ;;
+			esac
+		fi
+		if [ -n "$_base" ]; then
+			break
+		fi
+		if [ "$_waited" -ge "$_secs" ]; then
+			return 1
+		fi
+		sleep 1
+		_waited=$((_waited + 1))
+	done
+	_waited=0
+	while :; do
+		svc active "$_unit" || return 1
+		_pids="$(daemon_pids)"
+		[ "$_pids" = "$_base" ] || return 1
+		if [ "$_waited" -ge "$_secs" ]; then
+			return 0
+		fi
+		sleep 1
+		_waited=$((_waited + 1))
+	done
 }
 
 xrayr_present() {
@@ -787,6 +820,8 @@ cmd_install() {
 		svc enable XrayW
 		svc start XrayW
 		green "XrayW 已启动并设为开机自启。管理命令: XrayW（菜单）、XrayW status、XrayW log"
+	else
+		yellow "服务尚未启动；编辑 $CONF（填写 ApiHost / ApiKey / NodeID）后执行 XrayW check，通过后执行 XrayW start，再执行 XrayW enable 设置开机自启。"
 	fi
 }
 
@@ -875,7 +910,12 @@ cmd_start() {
 	need_root
 	require_bin
 	svc start XrayW
-	stable_running XrayW "$WAIT_START" && green "已启动" || red "启动后未能保持运行，请查看日志: XrayW log"
+	if stable_running XrayW "$WAIT_START"; then
+		green "已启动"
+	else
+		red "启动后未能保持运行，请查看日志: XrayW log"
+		return 1
+	fi
 }
 cmd_stop() {
 	need_root
@@ -886,7 +926,12 @@ cmd_restart() {
 	need_root
 	require_bin
 	svc restart XrayW
-	stable_running XrayW "$WAIT_START" && green "已重启" || red "重启后未能保持运行，请查看日志: XrayW log"
+	if stable_running XrayW "$WAIT_START"; then
+		green "已重启"
+	else
+		red "重启后未能保持运行，请查看日志: XrayW log"
+		return 1
+	fi
 }
 cmd_enable() {
 	need_root
@@ -976,6 +1021,9 @@ cmd_uninstall() {
 		*/etc/XrayW) rm -rf "$CONF_DIR" ;;
 		*) die "拒绝删除异常的配置目录路径: $CONF_DIR" ;;
 		esac
+		# OpenRC writes its log to a file instead of the journal/syslog; the
+		# script itself never rotates it, so remove just the file.
+		rm -f "$ROOT/var/log/XrayW.log"
 		green "已卸载并删除 $CONF_DIR"
 	else
 		green "已卸载（保留配置 $CONF_DIR）"
@@ -1038,9 +1086,9 @@ EOF
 		printf '请选择: '
 		read -r _c || return 0
 		case "$_c" in
-		1) cmd_start ;;
+		1) cmd_start || true ;;
 		2) cmd_stop ;;
-		3) cmd_restart ;;
+		3) cmd_restart || true ;;
 		4) cmd_status ;;
 		5) cmd_log ;;
 		6) cmd_check || true ;;

@@ -279,6 +279,109 @@ func TestMigrateDryRunAndExisting(t *testing.T) {
 	}
 }
 
+// A dry run writes nothing, so it must work on an already installed system
+// where the target config exists.
+func TestMigrateDryRunOnInstalledSystem(t *testing.T) {
+	from, to := setupXrayR(t)
+	if _, err := Run(Options{From: from, To: to, SearchDirs: []string{}}); err != nil {
+		t.Fatal(err)
+	}
+	before := hashTree(t, to)
+	cfgPath := filepath.Join(to, "config.yml")
+	cfgBefore, err := os.ReadFile(cfgPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	r, err := Run(Options{From: from, To: to, DryRun: true, SearchDirs: []string{}})
+	if err != nil {
+		t.Fatalf("dry-run on an installed system: %v", err)
+	}
+	if len(r.Changes) == 0 || len(r.Copies) == 0 || strings.TrimSpace(r.String()) == "" {
+		t.Fatalf("dry-run report is empty: %+v", r)
+	}
+	if !strings.Contains(r.String(), "目标已存在") {
+		t.Errorf("dry-run should report that the target is kept:\n%s", r)
+	}
+
+	// Nothing was written: same files, same bytes.
+	after := hashTree(t, to)
+	if len(after) != len(before) {
+		t.Fatalf("dry-run changed the file count: %d -> %d", len(before), len(after))
+	}
+	for p, h := range before {
+		if after[p] != h {
+			t.Errorf("dry-run changed %s", p)
+		}
+	}
+	cfgAfter, err := os.ReadFile(cfgPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(cfgAfter) != string(cfgBefore) {
+		t.Fatal("dry-run rewrote the existing config")
+	}
+
+	// A real migration still refuses the existing target without --force.
+	if _, err := Run(Options{From: from, To: to, SearchDirs: []string{}}); err == nil {
+		t.Fatal("existing target must still be refused without --force")
+	}
+}
+
+// The installer may have downloaded the geo files into the target before the
+// migration runs; that is not a missing file and must not be warned about.
+func TestMigrateGeoInTargetIsNotMissing(t *testing.T) {
+	from, to := setupXrayR(t)
+	if err := os.MkdirAll(to, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range geoFiles {
+		b, err := os.ReadFile(filepath.Join(from, f))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Remove(filepath.Join(from, f)); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(to, f), b, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	r, err := Run(Options{From: from, To: to, SearchDirs: []string{}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	joined := strings.Join(r.Warnings, "\n")
+	for _, f := range geoFiles {
+		if strings.Contains(joined, "未找到 "+f) {
+			t.Errorf("geo file present in the target reported as missing: %s\n%s", f, joined)
+		}
+		if _, err := os.Stat(filepath.Join(to, f)); err != nil {
+			t.Errorf("existing geo file lost: %s", f)
+		}
+	}
+}
+
+// Without a geo file anywhere the warning is still printed.
+func TestMigrateGeoMissingStillWarns(t *testing.T) {
+	from, to := setupXrayR(t)
+	for _, f := range geoFiles {
+		if err := os.Remove(filepath.Join(from, f)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	r, err := Run(Options{From: from, To: to, SearchDirs: []string{}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	joined := strings.Join(r.Warnings, "\n")
+	for _, f := range geoFiles {
+		if !strings.Contains(joined, "未找到 "+f) {
+			t.Errorf("missing geo file not warned about: %s", f)
+		}
+	}
+}
+
 // The XrayR v0.9.4 example config only has an SSpanel node.
 func TestMigrateXrayRExampleOnlySSpanel(t *testing.T) {
 	dir := t.TempDir()
