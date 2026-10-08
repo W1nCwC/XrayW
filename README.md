@@ -148,7 +148,7 @@ Things to note after migrating:
 
 - XrayR uses the panel's REALITY settings only when `DisableLocalREALITYConfig: true`. XrayW uses the panel REALITY directly when the panel node has `tls=2`.
 - `SendIP: 0.0.0.0` now means the system chooses the outbound address. XrayR bound to IPv4, which made IPv6 destinations unreachable.
-- Xray v26 has removed `allowInsecure` from custom outbounds. `check` will suggest `pinnedPeerCertSha256` instead.
+- Xray v26 has removed `allowInsecure` from custom outbounds; use `pinnedPeerCertSha256` instead.
 
 ### Panel WebSocket (real-time sync)
 

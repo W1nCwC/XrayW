@@ -148,7 +148,7 @@ Nodes:
 
 - XrayR 的 REALITY 只在 `DisableLocalREALITYConfig: true` 时使用面板配置；XrayW 在面板节点 `tls=2` 时直接使用面板 REALITY。
 - `SendIP: 0.0.0.0` 现在表示由系统选择出口地址（XrayR 会绑定 IPv4，导致无法访问 IPv6 目标）。
-- 自定义出站中的 `allowInsecure` 已被 Xray v26 移除，`check` 会提示改用 `pinnedPeerCertSha256`。
+- 自定义出站中的 `allowInsecure` 已被 Xray v26 移除，请改用 `pinnedPeerCertSha256`。
 
 ### 面板 WebSocket（实时同步）
 
