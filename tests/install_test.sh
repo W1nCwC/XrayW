@@ -428,6 +428,20 @@ t_stable_running_pid_handover() {
 	check "settling on one PID after the handover counts as stable" stable_running XrayW 2
 }
 
+t_stable_running_old_process_lingers() {
+	mock_backend
+	: >"$ST/XrayW.active"
+	# procd stops the old process before starting the new one, and the old one
+	# may take seconds to exit (its init script allows a 10 s term_timeout).
+	# Here the new PID shows up but the old one keeps running for 4 s: longer
+	# than the old SECONDS budget, shorter than the settle budget. This used to
+	# be reported as "did not stay up" while the service was running fine.
+	fake_pidof "1111 2222" "1111 2222" "1111 2222" "1111 2222" \
+		"2222" "2222" "2222" "2222" "2222" "2222"
+	check "an old process that outlives the old budget still counts as stable" \
+		stable_running XrayW 2
+}
+
 t_stable_running_crash_loop() {
 	mock_backend
 	: >"$ST/XrayW.active"
@@ -440,6 +454,9 @@ t_stable_running_never_starts() {
 	mock_backend
 	: >"$ST/XrayW.active"
 	fake_pidof "" "" ""
+	# The settle budget is shortened here; what is tested is that a process
+	# which never appears times out, not how many seconds it waits.
+	WAIT_SETTLE=2
 	refute "a process that never appears times out as unstable" stable_running XrayW 1
 }
 
@@ -449,6 +466,8 @@ t_restart_exit_code() {
 	make_fake_bin "$BIN"
 	: >"$ST/XrayW.exists"
 	: >"$ST/XrayW.active"
+	# Exit codes are what is tested here, so keep the "never appears" runs short.
+	WAIT_SETTLE=1
 	fake_pidof "" "" ""
 	( cmd_restart ) >"$XRAYW_ROOT/out" 2>&1
 	eq "restart exits non-zero when it does not stay up" "$?" 1
@@ -715,6 +734,27 @@ t_uninstall_purge_removes_openrc_log() {
 	refute "--purge removes the OpenRC log" test -e "$XRAYW_ROOT/var/log/XrayW.log"
 }
 
+t_uninstall_purge_removes_config_backups() {
+	mock_backend
+	make_fake_bin "$XRAYW_ROOT/fakebin"
+	XRAYW_SELF="$SCRIPT"
+	cmd_install --binary "$XRAYW_ROOT/fakebin" --no-geo >/dev/null 2>&1
+	# cmd_migrate() copies $CONF_DIR to $CONF_DIR.bak.<timestamp> (a full
+	# config.yml, ApiKey included) and uninstall used to leave those behind.
+	mkdir -p "$CONF_DIR.bak.20260101-010101" "$CONF_DIR.bak.20260102-020202"
+	echo "secret" >"$CONF_DIR.bak.20260101-010101/config.yml"
+	echo "secret" >"$CONF_DIR.bak.20260102-020202/config.yml"
+	# A sibling directory that only shares the prefix must never be touched.
+	mkdir -p "$XRAYW_ROOT/etc/XrayW-other"
+	cmd_uninstall -y >/dev/null 2>&1
+	check "uninstall without --purge keeps a config backup" test -d "$CONF_DIR.bak.20260101-010101"
+	check "uninstall without --purge keeps every config backup" test -d "$CONF_DIR.bak.20260102-020202"
+	cmd_uninstall --purge -y >/dev/null 2>&1
+	refute "--purge removes a config backup" test -e "$CONF_DIR.bak.20260101-010101"
+	refute "--purge removes every config backup" test -e "$CONF_DIR.bak.20260102-020202"
+	check "--purge keeps a directory that only shares the prefix" test -d "$XRAYW_ROOT/etc/XrayW-other"
+}
+
 t_uninstall_openwrt_sysupgrade() {
 	mock_backend
 	make_fake_bin "$XRAYW_ROOT/fakebin"
@@ -768,9 +808,11 @@ run() { # name
 for t in t_arch t_endian_dd_and_hexdump t_flavor_and_backend t_latest_tag t_verify t_generated_scripts \
 	t_install_fresh t_install_xrayr_present t_install_check_fails t_install_openwrt \
 	t_install_flavor_prefix_upgrade t_install_from_release t_update_version_shorthand t_space_check t_switch_rollback \
-	t_stable_running_waits_for_pid t_stable_running_pid_handover t_stable_running_crash_loop \
+	t_stable_running_waits_for_pid t_stable_running_pid_handover t_stable_running_old_process_lingers \
+	t_stable_running_crash_loop \
 	t_stable_running_never_starts t_restart_exit_code \
 	t_manager_dispatch t_menu t_uninstall t_uninstall_purge_removes_openrc_log \
+	t_uninstall_purge_removes_config_backups \
 	t_uninstall_openwrt_sysupgrade t_uninstall_refuses_odd_paths t_none_backend; do
 	run "$t"
 done

@@ -25,6 +25,12 @@ DEFAULT_PREFIX="$ROOT/usr/local/XrayW"
 # Seconds to watch a service after start / switch (tests shorten them).
 WAIT_START="${XRAYW_WAIT:-2}"
 WAIT_SWITCH="${XRAYW_WAIT:-5}"
+# Extra seconds the stability watch gives the supervisor to settle on a single
+# process, on top of the caller's SECONDS. procd returns from `restart` while
+# the old process is still exiting (its init script allows term_timeout 10 s)
+# and systemd's pidof is briefly empty, so the settle time is not bounded by
+# SECONDS. Tests lower this.
+WAIT_SETTLE="${XRAYW_SETTLE:-8}"
 # Size needed to download, unpack and replace (KiB): gzip + binary + old binary.
 NEED_KB_LITE=90000
 NEED_KB_FULL=170000
@@ -563,17 +569,29 @@ daemon_pids() {
 	echo $_out
 }
 
-# stable_running UNIT SECONDS: running, and the same process the whole time
-# (supervisors report a crash-looping service as started).
+# stable_running UNIT SECONDS [STALE_PIDS]: running, and the same process the
+# whole time (supervisors report a crash-looping service as started).
 #
-# A restart is not instantaneous: systemd's pidof is empty for a moment after
-# `restart` returns, and procd briefly reports the old and the new PID at the
-# same time. So wait for exactly one process first (up to SECONDS), then watch
-# it for another SECONDS: still active and still that same PID. A crash-restart
-# loop changes the PID and is still reported as unstable.
+# A restart is not instantaneous, and the settling time is not bounded by
+# SECONDS: systemd's pidof is empty for a moment after `restart` returns, and
+# procd returns from `restart` while the old process is still shutting down
+# (its init script allows term_timeout 10 s), so the very first poll can still
+# see the process that is on its way out. So wait for exactly one process first
+# (up to SECONDS + WAIT_SETTLE), then watch it for another SECONDS: still
+# active and still that same PID.
+#
+# STALE_PIDS is the PID list the caller saw before it triggered the restart.
+# Those processes are being replaced, so they are not a valid stability base:
+# accepting one would make the (expected) handover look like a crash. They are
+# only accepted once the settle budget is spent, which means the restart
+# evidently did not replace the process at all. A crash-restart loop changes
+# the PID and is still reported as unstable; a process that never appears
+# still times out.
 stable_running() {
 	_unit="$1"
 	_secs="$2"
+	_stale="${3:-}"
+	_settle=$((_secs + WAIT_SETTLE))
 	_base=""
 	_waited=0
 	while :; do
@@ -582,13 +600,22 @@ stable_running() {
 			_pids="$(daemon_pids)"
 			case "$_pids" in
 			'' | *' '*) ;;
-			*) _base="$_pids" ;;
+			*)
+				case " $_stale " in
+				*" $_pids "*)
+					if [ "$_waited" -ge "$WAIT_SETTLE" ]; then
+						_base="$_pids"
+					fi
+					;;
+				*) _base="$_pids" ;;
+				esac
+				;;
 			esac
 		fi
 		if [ -n "$_base" ]; then
 			break
 		fi
-		if [ "$_waited" -ge "$_secs" ]; then
+		if [ "$_waited" -ge "$_settle" ]; then
 			return 1
 		fi
 		sleep 1
@@ -925,8 +952,11 @@ cmd_stop() {
 cmd_restart() {
 	need_root
 	require_bin
+	# procd returns from `restart` while the old process is still exiting; the
+	# old PID must not be mistaken for the new one (see stable_running).
+	_old="$(daemon_pids)"
 	svc restart XrayW
-	if stable_running XrayW "$WAIT_START"; then
+	if stable_running XrayW "$WAIT_START" "$_old"; then
 		green "已重启"
 	else
 		red "重启后未能保持运行，请查看日志: XrayW log"
@@ -1018,7 +1048,19 @@ cmd_uninstall() {
 	drop_sysupgrade_entries "$_purge"
 	if [ "$_purge" -eq 1 ]; then
 		case "$CONF_DIR" in
-		*/etc/XrayW) rm -rf "$CONF_DIR" ;;
+		*/etc/XrayW)
+			rm -rf "$CONF_DIR"
+			# cmd_migrate() backs the config directory up to
+			# $CONF_DIR.bak.<timestamp> (a full copy, ApiKey included);
+			# --purge removes those too. Only paths that keep the exact
+			# $CONF_DIR prefix and the .bak. suffix are touched.
+			for _b in "$CONF_DIR".bak.*; do
+				[ -e "$_b" ] || continue
+				case "$_b" in
+				"$CONF_DIR".bak.*) rm -rf "$_b" ;;
+				esac
+			done
+			;;
 		*) die "拒绝删除异常的配置目录路径: $CONF_DIR" ;;
 		esac
 		# OpenRC writes its log to a file instead of the journal/syslog; the
