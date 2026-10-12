@@ -1,5 +1,3 @@
-[简体中文](docs/README.zh-CN.md)
-
 # XrayW
 
 > XrayW is an XrayR rewrite (reset edition) built on the official Xray-core, designed for Xboard. It was first developed as W1nCray v0.1–v0.3; W1nCray has since evolved into a multi-core agent, see https://github.com/W1nCwC/W1nCray
@@ -188,8 +186,6 @@ go run ./tools/protogen  # Regenerate app/dispatcher/config.pb.go (no protoc nee
 sh tests/install_test.sh # Install script tests (works with dash, busybox ash and bash; does not touch the system)
 go test -tags dnslite,fallbackroots ./common/cert/ ./core/ # Lite build
 ```
-
-Design and verification notes: [docs/PLAN.md](docs/PLAN.md), [docs/PLAN-v2-migration.md](docs/PLAN-v2-migration.md).
 
 ## License
 
